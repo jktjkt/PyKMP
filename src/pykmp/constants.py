@@ -17,8 +17,8 @@ if TYPE_CHECKING:
 # Decimals of each variable in the GetRegister command request/response (CID=0x10)
 REGISTERS: Final[Mapping[int, str]] = {
     0x003C: "Heat Energy (E1)",
-    0x0044: "Volume",
-    0x004A: "Flow",
+    0x0044: "Volume V1",
+    0x004A: "Flow V1",
     0x0050: "Current Power",
     0x0056: "Temp1",
     0x0057: "Temp2",
