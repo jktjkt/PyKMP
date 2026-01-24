@@ -77,7 +77,7 @@ UNITS_NAMES: Final[Mapping[int, str]] = {
     0x16: "kW",
     0x17: "MW",
     0x18: "GW",
-    0x19: "kvar",
+    0x19: "var",
     0x1A: "kvar",
     0x1B: "Mvar",
     0x1C: "Gvar",
