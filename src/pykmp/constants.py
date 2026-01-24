@@ -23,8 +23,8 @@ REGISTERS: Final[Mapping[int, str]] = {
     0x0056: "Temp1",
     0x0057: "Temp2",
     0x0059: "Tempdiff",
-    0x0061: "Temp1xm3",
-    0x006E: "Temp2xm3",
+    0x0061: "Temp1xm3 E8", # V1 * t1 (inlet)
+    0x006E: "Temp2xm3 E9", # V2 * t2 (outlet)
     0x0071: "Infoevent",
     0x007B: "MaxFlowDate_Y",
     0x007C: "MaxFlow_Y",
