@@ -18,6 +18,7 @@ from pykmp.client import (
     EncodedClientRequest,
     EncodedClientResponse,
     PySerialClientCommunicator,
+    UnknownCidError,
 )
 
 if TYPE_CHECKING:
@@ -162,3 +163,72 @@ def test_client_pyserial_communicator_send_request(
             serial_device=mock_serial.port
         )  # pyright: ignore[reportGeneralTypeIssues]
         communicator.send_request(message=messages.GetSerialRequest())
+
+
+@pytest.mark.parametrize(
+    ("payload", "parsed"),
+    [
+        pytest.param(
+            '80 3f 01 05 8a 0d',
+            messages.GetTypeRequest(),
+        ),
+        pytest.param(
+            '80 3f 02 35 e9 0d',
+            messages.GetSerialRequest(),
+        ),
+        pytest.param(
+            '80 3f 10 02 01 5a 00 9a 1b bf 2b 0d',
+            messages.GetRegisterRequest(data_raw=b'\x02\x01Z\x00\x9a', registers=[346, 154]),
+        ),
+        pytest.param(
+            '80 3f 10 01 03 e9 7c d4 0d',
+            messages.GetRegisterRequest(data_raw=b'\x01\x03\xe9', registers=[1001]),
+        ),
+        pytest.param(
+            '80 ff ff 1d 0f 0d',
+            UnknownCidError(cid=0xff, raw_data=b''),
+        ),
+    ]
+)
+def test_blind_command_decoding(payload, parsed) -> None:
+    communicator = ClientCodec(
+        destination_address=SOME_DESTINATION_ADDRESS,
+    )
+    if isinstance(parsed, Exception):
+        with pytest.raises(type(parsed)) as excinfo:
+            decoded = communicator.decode_command(bytes.fromhex(payload))
+        assert str(excinfo.value) == str(parsed)
+    else:
+        decoded = communicator.decode_command(bytes.fromhex(payload))
+        assert decoded == parsed
+
+@pytest.mark.parametrize(
+    ("payload", "parsed"),
+    [
+        pytest.param(
+            '40 3f 10 03 e9 33 04 00 00 00 00 00 63 38 0d',
+            messages.GetRegisterResponse(data_raw=b'\x03\xe9\x33\x04\x00\x00\x00\x00\x00',
+                                         registers={1001:
+                                                    messages.RegisterData(id_=1001, unit=51, value=b'\x04\x00\x00\x00\x00\x00')}),
+        ),
+        pytest.param(
+            '06',
+            NotImplementedError(),
+        ),
+        pytest.param(
+            '40 ff ff 1d 0f 0d',
+            UnknownCidError(cid=0xff, raw_data=b''),
+        ),
+    ]
+)
+def test_blind_response_decoding(payload, parsed) -> None:
+    communicator = ClientCodec(
+        destination_address=SOME_DESTINATION_ADDRESS,
+    )
+    if isinstance(parsed, Exception):
+        with pytest.raises(type(parsed)) as excinfo:
+            decoded = communicator.decode_response(bytes.fromhex(payload))
+        assert str(excinfo.value) == str(parsed)
+    else:
+        decoded = communicator.decode_response(bytes.fromhex(payload))
+        assert decoded == parsed
