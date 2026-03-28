@@ -259,3 +259,29 @@ class CommandId(enum.Enum):
     GET_LOG_PAST_PRESENT = 0xA1
     GET_LOG_ID_PRESENT = 0xA2
     GET_LOG_TIME_PAST = 0xA3
+    LOGGER = 0xb8
+
+
+@enum.unique
+class LoggerSubCommandId(enum.Enum):
+    """Logger sub-commands"""
+    GET_CONFIGURATION = 0x05
+    GET_LOG_ID_PAST_ABS = 0x06
+    GET_LOG_LAST_ENTRY_PAST_ABS = 0x07
+    GET_LOG_ID = 0x08
+    GET_LOG_NEXT_FORMAT = 0x09
+
+
+@enum.unique
+class LoggerType(enum.Enum):
+    """Types of loggers"""
+    CONFIG = 0
+    INFO = 1
+    INTERVAL_YEAR = 2
+    INTERVAL_MONTH = 3
+    INTERVAL_DAY = 4
+    INTERVAL_HOUR = 5
+    INTERVAL_MIN1 = 6
+    INTERVAL_MIN2 = 7
+    SW_DOWNLOAD_SUCCESS = 8
+    SW_DOWNLOAD_AUDIT = 9

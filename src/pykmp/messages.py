@@ -167,6 +167,30 @@ class WithDataMixin(HasCommandIdAndName, Protocol):
     # Set only on instantiation via decode().
     data_raw: codec.ApplicationDataBytes | None = attrs.field(default=None)
 
+    @classmethod
+    def _read_field(cls, data, name, index, size, type_=None):
+        if (data_len := len(data.data)) < index + size:
+            raise codec.DataLengthUnexpectedError(
+                what=f"{cls.__name__}: cannot read {size} more bytes for {name} at offset {index}",
+                length_expected=index + size,
+                expected_is_minimum=True,
+                actual=data_len,
+            )
+        buf = data.data[index:index + size]
+        if type_ == int:
+            buf = int.from_bytes(buf, "big")
+        index += size
+        return (buf, index)
+
+    @classmethod
+    def _no_more_data(cls, data, expected):
+        if (data_len := len(data.data)) > expected:
+            raise codec.DataLengthUnexpectedError(
+                what=cls.__name__,
+                length_expected=expected,
+                actual=data_len,
+            )
+
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True)
 class GetTypeRequest(
@@ -652,3 +676,175 @@ class GetRegisterResponse(
 
 
 GetRegisterRequest.response_type = GetRegisterResponse
+
+@attrs.define(kw_only=True)
+class InvalidLoggerSubcommandError(codec.BaseCodecError):  # noqa: D101
+    subcommand: int
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"Logger subcommand ID {self.subcommand} is invalid."
+
+
+@attrs.define(kw_only=True)
+class InvalidLoggerTypeError(codec.BaseCodecError):  # noqa: D101
+    logger_type: int
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"Logger type {self.logger_type} is invalid."
+
+
+def dont_repr_raw_data(cls, fields):
+    return [f.evolve(repr=False) if f.name == 'data_raw' else f for f in fields]
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True)
+class LoggerCommand(
+    BaseRequest["LoggerCommand"],
+    WithDataMixin,
+    SupportsDecode,
+    SupportsEncode,
+):
+    """Reading data loggers."""
+
+    response_type: ClassVar[type[LoggerResponse]]
+    command_id: ClassVar[int] = constants.CommandId.LOGGER.value
+    command_name: ClassVar[str] = "Logger"
+    subcommand: constants.LoggerSubCommandId = attrs.field()
+    logger: constants.LoggerType = attrs.field()
+
+    @classmethod
+    def decode(cls, data: codec.ApplicationData) -> Self:
+        cls._decode_validate_command_id(data.command_id)
+
+        index = 0
+        (subcommand, index) = cls._read_field(data, 'subcommand', index, 1, int)
+        try:
+            subcommand = constants.LoggerSubCommandId(data.data[0])
+        except ValueError:
+            raise InvalidLoggerSubcommandError(subcommand=data.data[0])
+
+        (logger, index) = cls._read_field(data, 'logger', index, 1, int)
+        try:
+            logger = constants.LoggerType(data.data[1])
+        except ValueError:
+            raise InvalidLoggerTypeError(logger_type=data.data[1])
+
+        matching_commands = [c for c in LoggerCommand.__subclasses__()
+                             if getattr(c, 'subcommand', None) is not None
+                             and c.subcommand == subcommand]
+        assert len(matching_commands) <= 1
+        if len(matching_commands):
+            return matching_commands[0].decode(logger=logger, index=index, data=data)
+        else:
+            return cls(subcommand=subcommand, logger=logger, data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogConfiguration(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_CONFIGURATION
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True)
+class LoggerResponse(
+    BaseResponse[LoggerCommand],
+    WithDataMixin,
+    SupportsDecode,
+    SupportsEncode,
+):
+    """Response with log data"""
+
+    request_type: ClassVar[type] = LoggerCommand
+    command_id: ClassVar[int] = LoggerCommand.command_id
+    command_name: ClassVar[str] = LoggerCommand.command_name
+    subcommand: constants.LoggerSubCommandId = attrs.field()
+    logger: constants.LoggerType = attrs.field()
+
+    @classmethod
+    def decode(cls, data: codec.ApplicationData) -> Self:
+        cls._decode_validate_command_id(data.command_id)
+        index = 0
+        (subcommand, index) = cls._read_field(data, 'subcommand', index, 1, int)
+        try:
+            subcommand = constants.LoggerSubCommandId(data.data[0])
+        except ValueError:
+            raise InvalidLoggerSubcommandError(subcommand=data.data[0])
+
+        (logger, index) = cls._read_field(data, 'logger', index, 1, int)
+        try:
+            logger = constants.LoggerType(data.data[1])
+        except ValueError:
+            raise InvalidLoggerTypeError(logger_type=data.data[1])
+
+        matching_responses = [r for r in LoggerResponse.__subclasses__()
+                              if getattr(r, 'subcommand', None) is not None
+                              and r.subcommand == subcommand]
+        assert len(matching_responses) <= 1
+        if len(matching_responses):
+            return matching_responses[0].decode(logger=logger, index=index, data=data)
+        else:
+            return cls(subcommand=subcommand, logger=logger, data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
+
+
+LoggerCommand.response_type = LoggerResponse
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class LoggerConfigResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_CONFIGURATION
+    date1_format = attrs.field()
+    date1 = attrs.field()
+    date2_format = attrs.field()
+    date2 = attrs.field()
+    max_interval_records_format = attrs.field()
+    max_interval_records = attrs.field()
+    interval_format = attrs.field()
+    interval = attrs.field()
+    depth: int = attrs.field()
+    register_ids: dict = attrs.field()
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (date1_format, index) = cls._read_field(data, 'date1-format', index, 1, int)
+        (date1, index) = cls._read_field(data, 'date1', index, 2)
+        (date2_format, index) = cls._read_field(data, 'date2-format', index, 1, int)
+        (date2, index) = cls._read_field(data, 'date2', index, 2)
+        (max_interval_records_format, index) = cls._read_field(data, 'max-interval-records-format', index, 1, int)
+        (max_interval_records, index) = cls._read_field(data, 'max-interval-records', index, 1, int)
+        (interval_format, index) = cls._read_field(data, 'interval-format', index, 1, int)
+        (interval, index) = cls._read_field(data, 'interval', index, 1, int)
+        (depth, index) = cls._read_field(data, 'depth', index, 2, int)
+        (no_regs, index) = cls._read_field(data, 'number-of-registers', index, 1, int)
+        register_ids = {}
+        for i in range(no_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids[rid] = constants.REGISTERS.get(rid, None)
+        cls._no_more_data(data, index)
+
+        return cls(subcommand=cls.subcommand, logger=logger,
+                   date1=date1,
+                   date1_format=date1_format,
+                   date2=date2,
+                   date2_format=date2_format,
+                   max_interval_records=max_interval_records,
+                   max_interval_records_format=max_interval_records_format,
+                   interval=interval,
+                   interval_format=interval_format,
+                   depth=depth,
+                   register_ids=register_ids,
+                   data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
