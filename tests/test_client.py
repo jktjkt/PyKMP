@@ -205,19 +205,32 @@ def test_client_pyserial_communicator_send_request(
                                             data_raw=b'\x07\x07\xff\xff\x00\x01\x01\x03\xea',
                                             ),
         ),
+        pytest.param(
+            '80 3f b8 1b f9 02 00 00 00 02 00 02 01 03 eb 75 07 0d',
+            messages.GetLogIDPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                     logger=constants.LoggerType.INTERVAL_YEAR,
+                                     log_id=2,
+                                     num_entries=2,
+                                     register_ids=[1003],
+                                     data_raw=b'\x06\x02\x00\x00\x00\x02\x00\x02\x01\x03\xeb',
+                                     ),
+        ),
     ]
 )
 def test_blind_command_decoding(payload, parsed) -> None:
     communicator = ClientCodec(
-        destination_address=SOME_DESTINATION_ADDRESS,
+        destination_address=ANOTHER_DESTINATION_ADDRESS,
     )
+    raw_bytes = bytes.fromhex(payload)
     if isinstance(parsed, Exception):
         with pytest.raises(type(parsed)) as excinfo:
-            decoded = communicator.decode_command(bytes.fromhex(payload))
+            decoded = communicator.decode_command(raw_bytes)
         assert str(excinfo.value) == str(parsed)
     else:
-        decoded = communicator.decode_command(bytes.fromhex(payload))
+        decoded = communicator.decode_command(raw_bytes)
         assert decoded == parsed
+        encoded = communicator.encode(parsed).physical_bytes
+        assert encoded.hex(' ') == payload
 
 @pytest.mark.parametrize(
     ("payload", "parsed"),

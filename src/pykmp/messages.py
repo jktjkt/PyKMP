@@ -766,7 +766,16 @@ class GetLogIDPastAbs(LoggerCommand):
                    register_ids=register_ids)
 
     def encode(self) -> codec.ApplicationData:
-        raise NotImplementedError
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger).to_bytes() \
+            + self.log_id.to_bytes(length=4) \
+            + self.num_entries.to_bytes(length=2) \
+            + len(self.register_ids).to_bytes()
+        for rid in self.register_ids:
+            raw += rid.to_bytes(length=2)
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
 
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
@@ -793,7 +802,16 @@ class GetLogLastEntryPastAbs(LoggerCommand):
                    register_ids=register_ids)
 
     def encode(self) -> codec.ApplicationData:
-        raise NotImplementedError
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger).to_bytes() \
+            + self.offset.to_bytes(length=2) \
+            + self.num_entries.to_bytes(length=2) \
+            + len(self.register_ids).to_bytes()
+        for rid in self.register_ids:
+            raw += rid.to_bytes(length=2)
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
 
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
@@ -806,7 +824,11 @@ class GetLogConfiguration(LoggerCommand):
         return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data)
 
     def encode(self) -> codec.ApplicationData:
-        raise NotImplementedError
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger).to_bytes()
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
 
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True)
