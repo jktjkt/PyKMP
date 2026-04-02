@@ -33,6 +33,7 @@ def handle_tx(buf):
         if packet is None:
             break
         try:
+            print(f'##> {packet.hex("-")} ({len(packet)} bytes)')
             parsed = client_codec.decode_command(packet)
             print(f'>>> {parsed}')
         except pykmp.client.UnknownCidError as e:
@@ -48,6 +49,7 @@ def handle_rx(buf):
             break
         try:
             parsed = client_codec.decode_response(packet)
+            print(f'##< {packet.hex("-")} ({len(packet)} bytes)')
             print(f'<<< {parsed}')
             if regs := getattr(parsed, 'registers', None):
                 for (num, reg) in regs.items():
