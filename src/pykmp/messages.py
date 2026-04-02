@@ -755,7 +755,7 @@ class GetLogIDPastAbs(LoggerCommand):
         (log_id, index) = cls._read_field(data, 'log-id', index, 4, int)
         (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
         (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
-        register_ids = {}
+        register_ids = []
         for i in range(num_regs):
             (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
             register_ids.append(rid)
