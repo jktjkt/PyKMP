@@ -358,6 +358,23 @@ def test_blind_command_decoding(payload, parsed) -> None:
                 data_raw=b'\x07\x07\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x03\xea/\x04\x00\x00\x00\x00\x00',
                 ),
         ),
+        pytest.param(
+            '40 3f b8 1b f9 02 00 02 01 00 00 00 02 00 00 00 02 00 c0 03 eb 30 04 00 00 03 f8 05 00 03 d0 f5 aa 3a 0d',
+            messages.GetLogIDPastAbsResponse(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                             logger=constants.LoggerType.INTERVAL_YEAR,
+                                             first_log_id=2,
+                                             last_log_id=2,
+                                             info=constants.LoggerInfo.TAIL_INCLUDED | constants.LoggerInfo.HEAD_INCLUDED,
+                                             log=[
+                                                 [
+                                                     messages.RegisterData(id_=1003, unit=48, value=b'\x04\x00\x00\x03\xf8\x05'),
+                                                 ], [
+                                                     messages.RegisterData(id_=1003, unit=48, value=b'\x04\x00\x00\x03\xd0\xf5'),
+                                                 ],
+                                             ],
+                                             data_raw=b'\x06\x02\x00\x02\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\xc0\x03\xeb0\x04\x00\x00\x03\xf8\x05\x00\x03\xd0\xf5',
+                                             ),
+        ),
     ]
 )
 def test_blind_response_decoding(payload, parsed) -> None:
