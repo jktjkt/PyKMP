@@ -194,6 +194,10 @@ class RegisterOutput:
                 # mm:dd
                 d = int.from_bytes(reg.value[2:], 'big')
                 value_str = f'{(d // 100 % 100):02}:{(d % 100):02}'
+            case 0x4f:
+                # DST yy:mm:dd hh:mm:ss
+                dst = reg.value[2]
+                value_str = f'{(2000 + reg.value[3]):02}-{reg.value[4]:02}-{reg.value[5]:02} {reg.value[6]:02}:{reg.value[7]:02}:{reg.value[8]:02}{"+" if dst > 0 else "-"}{(dst // 60):02}:{(dst % 60):02}'
             case 0x36:
                 # ASCII
                 value_str = reg.value[2:]

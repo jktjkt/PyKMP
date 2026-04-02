@@ -212,6 +212,7 @@ UNITS_NAMES: Final[Mapping[int, str]] = {
     0x3E: "days",
     0x3F: "RTC-Q",
     0x40: "Datetime",
+    0x4f: "DST YY-MM-DD hh:mm:ss",
     0x55: "%RH",
     0x56: "%O\N{SUBSCRIPT TWO}",
     0x57: "m/s",
