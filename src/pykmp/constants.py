@@ -264,7 +264,7 @@ class CommandId(enum.Enum):
 
 
 @enum.unique
-class LoggerSubCommandId(enum.Enum):
+class LoggerSubCommandId(enum.IntEnum):
     """Logger sub-commands"""
     GET_CONFIGURATION = 0x05
     GET_LOG_ID_PAST_ABS = 0x06
@@ -274,7 +274,7 @@ class LoggerSubCommandId(enum.Enum):
 
 
 @enum.unique
-class LoggerType(enum.Enum):
+class LoggerType(enum.IntEnum):
     """Types of loggers"""
     CONFIG = 0
     INFO = 1
