@@ -748,7 +748,7 @@ class GetLogIDPastAbs(LoggerCommand):
 
     log_id: int = attrs.field()
     num_entries: int = attrs.field()
-    register_ids: dict = attrs.field()
+    register_ids: list = attrs.field()
 
     @classmethod
     def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
@@ -758,7 +758,7 @@ class GetLogIDPastAbs(LoggerCommand):
         register_ids = {}
         for i in range(num_regs):
             (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
-            register_ids[rid] = constants.REGISTERS.get(rid, None)
+            register_ids.append(rid)
         cls._no_more_data(data, index)
         return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
                    log_id=log_id,
@@ -775,17 +775,17 @@ class GetLogLastEntryPastAbs(LoggerCommand):
 
     offset: int = attrs.field()
     num_entries: int = attrs.field()
-    register_ids: dict = attrs.field()
+    register_ids: list = attrs.field()
 
     @classmethod
     def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
         (offset, index) = cls._read_field(data, 'log-id', index, 2, int)
         (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
         (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
-        register_ids = {}
+        register_ids = []
         for i in range(num_regs):
             (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
-            register_ids[rid] = constants.REGISTERS.get(rid, None)
+            register_ids.append(rid)
         cls._no_more_data(data, index)
         return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
                    offset=offset,
@@ -867,7 +867,7 @@ class LoggerConfigResponse(LoggerResponse):
     interval_format = attrs.field()
     interval = attrs.field()
     depth: int = attrs.field()
-    register_ids: dict = attrs.field()
+    register_ids: list = attrs.field()
 
     @classmethod
     def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
@@ -881,10 +881,10 @@ class LoggerConfigResponse(LoggerResponse):
         (interval, index) = cls._read_field(data, 'interval', index, 1, int)
         (depth, index) = cls._read_field(data, 'depth', index, 2, int)
         (num_regs, index) = cls._read_field(data, 'number-of-registers', index, 1, int)
-        register_ids = {}
+        register_ids = []
         for i in range(num_regs):
             (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
-            register_ids[rid] = constants.REGISTERS.get(rid, None)
+            register_ids.append(rid)
         cls._no_more_data(data, index)
 
         return cls(subcommand=cls.subcommand, logger=logger,

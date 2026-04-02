@@ -56,6 +56,9 @@ def handle_rx(buf):
                     name = pykmp.constants.REGISTERS.get(num, f"R-{num}")
                     output = tool_main.RegisterOutput.from_register_data(reg)
                     print(f'  | {output.to_pretty_line()}')
+            if register_ids := getattr(parsed, 'register_ids', None):
+                for rid in register_ids:
+                    print(f' {rid:>4} | {pykmp.constants.REGISTERS.get(rid, "<unknown>")}')
             if log := getattr(parsed, 'log', None):
                 for i, row in enumerate(log):
                     for reg in row:
