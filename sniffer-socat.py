@@ -54,6 +54,11 @@ def handle_rx(buf):
                     name = pykmp.constants.REGISTERS.get(num, f"R-{num}")
                     output = tool_main.RegisterOutput.from_register_data(reg)
                     print(f'  | {output.to_pretty_line()}')
+            if log := getattr(parsed, 'log', None):
+                for i, row in enumerate(log):
+                    for reg in row:
+                        output = tool_main.RegisterOutput.from_register_data(reg)
+                        print(f'{i:>2} | {output.to_pretty_line()}')
         except pykmp.client.UnknownCidError as e:
             print(f'<<< Unknown {e.cid:#02x}: {e.raw_data.hex(" ")}')
             if e.cid == 0xb8:

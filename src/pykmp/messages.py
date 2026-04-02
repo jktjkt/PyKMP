@@ -902,3 +902,88 @@ class LoggerConfigResponse(LoggerResponse):
 
     def encode(self) -> codec.ApplicationData:
         raise NotImplementedError
+
+
+def _decode_log_readout(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+    (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+    (num_regs, index) = cls._read_field(data, 'num-registers', index, 1, int)
+    (first_log_id, index) = cls._read_field(data, 'first-log-id', index, 4, int)
+    (last_log_id, index) = cls._read_field(data, 'last-log-id', index, 4, int)
+    (info, index) = cls._read_field(data, 'info', index, 2, int)
+
+    register_ids = []
+    register_units = []
+    register_value_lengths = []
+    register_sie = []
+    log = []
+    row = []
+
+    if num_entries:
+        for n in range(num_regs):
+            # FIXME: save format
+            (rid, index) = cls._read_field(data, f'0-rid-{n}', index, 2, int)
+            register_ids.append(rid)
+            (fmt_unit, index) = cls._read_field(data, f'0-format-{n}-unit', index, 1, int)
+            register_units.append(fmt_unit)
+            (fmt_len, index) = cls._read_field(data, f'0-format-{n}-size', index, 1, int)
+            register_value_lengths.append(fmt_len)
+            (fmt_sie, index) = cls._read_field(data, f'format-{n}-sie', index, 1)
+            register_sie.append(fmt_sie)
+            (value, index) = cls._read_field(data, f'0-value-{n}', index, fmt_len)
+
+            blob = fmt_len.to_bytes(1, 'big') + fmt_sie + value
+            v = RegisterData(
+                id_=cast(RegisterID, rid),
+                unit=cast(RegisterUnit, fmt_unit),
+                value=cast(RegisterValueBytes, blob),
+            )
+            row.append(v)
+        log.append(row)
+
+        for i in range(1, num_entries):
+            row = []
+            for n in range(num_regs):
+                (val, index) = cls._read_field(data, '{i}-value-{n}', index, register_value_lengths[n])
+                blob = register_value_lengths[n].to_bytes(1, 'big') + register_sie[n] + val
+                v = RegisterData(
+                    id_=cast(RegisterID, rid),
+                    unit=cast(RegisterUnit, fmt_unit),
+                    value=cast(RegisterValueBytes, blob),
+                )
+                row.append(v)
+            log.append(row)
+
+    cls._no_more_data(data, index)
+
+    return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
+               first_log_id=first_log_id,
+               last_log_id=last_log_id,
+               info=constants.LoggerInfo(info),
+               log=log)
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogIDPastAbsResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS
+
+    first_log_id: int = attrs.field()
+    last_log_id: int = attrs.field()
+    info: constants.LoggerInfo = attrs.field()
+    log: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        return _decode_log_readout(cls, logger, index, data)
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogLastEntryPastAbsResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS
+
+    first_log_id: int = attrs.field()
+    last_log_id: int = attrs.field()
+    info: constants.LoggerInfo = attrs.field()
+    log: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        return _decode_log_readout(cls, logger, index, data)
