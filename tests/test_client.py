@@ -188,6 +188,23 @@ def test_client_pyserial_communicator_send_request(
             '80 ff ff 1d 0f 0d',
             UnknownCidError(cid=0xff, raw_data=b''),
         ),
+        pytest.param(
+            '80 3f b8 05 02 70 ee 0d',
+            messages.GetLogConfiguration(subcommand=constants.LoggerSubCommandId.GET_CONFIGURATION,
+                                         logger=constants.LoggerType.INTERVAL_YEAR,
+                                         data_raw=b'\x05\x02',
+                                         ),
+        ),
+        pytest.param(
+            '80 3f b8 07 07 ff ff 00 01 01 03 ea b8 5e 0d',
+            messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
+                                            logger=constants.LoggerType.INTERVAL_MIN2,
+                                            offset=65535,
+                                            num_entries=1,
+                                            register_ids=[1002],
+                                            data_raw=b'\x07\x07\xff\xff\x00\x01\x01\x03\xea',
+                                            ),
+        ),
     ]
 )
 def test_blind_command_decoding(payload, parsed) -> None:
@@ -218,6 +235,90 @@ def test_blind_command_decoding(payload, parsed) -> None:
         pytest.param(
             '40 ff ff 1d 0f 0d',
             UnknownCidError(cid=0xff, raw_data=b''),
+        ),
+        pytest.param(
+            '40 3f b8 05 02 01 01 01 01 00 00 01 00 01 00 00 14 2b 00 3c 00 3f 00 61 00 6e 00 1b bf 00 41 01 6a 00'
+            + ' 44 00 54 00 55 01 71 00 63 00 7b 01 7f 00 7c 00 7d 01 1b 7f 00 7e 00 7f 01 81 00 1b 7f 00 81 01 82'
+            + ' 00 82 03 ec 00 af 00 5e 00 3d 00 3e 00 5f 00 60 01 d9 01 da 00 45 00 e0 00 e1 00 48 00 49 02 03 01'
+            + ' 52 01 5c 03 eb 03 ea d5 64 0d',
+            messages.LoggerConfigResponse(
+                subcommand=constants.LoggerSubCommandId.GET_CONFIGURATION,
+                logger=constants.LoggerType.INTERVAL_YEAR,
+                date1_format=1,
+                date1=b'\x01\x01',
+                date2_format=1,
+                date2=b'\x00\x00',
+                max_interval_records_format=1,
+                max_interval_records=0,
+                interval_format=1,
+                interval=0,
+                depth=20,
+                register_ids=[
+                    60,
+                    63,
+                    97,
+                    110,
+                    64,
+                    65,
+                    362,
+                    68,
+                    84,
+                    85,
+                    369,
+                    99,
+                    123,
+                    383,
+                    124,
+                    125,
+                    384,
+                    126,
+                    127,
+                    385,
+                    128,
+                    129,
+                    386,
+                    130,
+                    1004,
+                    175,
+                    94,
+                    61,
+                    62,
+                    95,
+                    96,
+                    473,
+                    474,
+                    69,
+                    224,
+                    225,
+                    72,
+                    73,
+                    515,
+                    338,
+                    348,
+                    1003,
+                    1002,
+                ],
+                data_raw=b'\x05\x02\x01\x01\x01\x01\x00\x00\x01\x00\x01\x00\x00\x14+\x00<\x00?\x00a\x00n\x00@\x00A'
+                    + b'\x01j\x00D\x00T\x00U\x01q\x00c\x00{\x01\x7f\x00|\x00}\x01\x80\x00~\x00\x7f\x01\x81\x00\x80'
+                    + b'\x00\x81\x01\x82\x00\x82\x03\xec\x00\xaf\x00^\x00=\x00>\x00_\x00`\x01\xd9\x01\xda\x00E\x00'
+                    + b'\xe0\x00\xe1\x00H\x00I\x02\x03\x01R\x01\\\x03\xeb\x03\xea',
+                ),
+        ),
+        pytest.param(
+            '40 3f b8 07 07 00 01 01 00 00 00 00 00 00 00 00 00 01 03 ea 2f 04 00 00 00 00 00 1f 2f 0d',
+            messages.GetLogLastEntryPastAbsResponse(
+                subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
+                logger=constants.LoggerType.INTERVAL_MIN2,
+                first_log_id=0,
+                last_log_id=0,
+                info=constants.LoggerInfo.NO_LOG_ENTRIES,
+                log=[
+                    [
+                        messages.RegisterData(id_=1002, unit=47, value=b'\x04\x00\x00\x00\x00\x00'),
+                    ],
+                ],
+                data_raw=b'\x07\x07\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x03\xea/\x04\x00\x00\x00\x00\x00',
+                ),
         ),
     ]
 )
