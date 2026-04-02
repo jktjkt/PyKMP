@@ -743,6 +743,60 @@ class LoggerCommand(
 
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogIDPastAbs(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS
+
+    log_id: int = attrs.field()
+    num_entries: int = attrs.field()
+    register_ids: dict = attrs.field()
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (log_id, index) = cls._read_field(data, 'log-id', index, 4, int)
+        (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+        (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
+        register_ids = {}
+        for i in range(num_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids[rid] = constants.REGISTERS.get(rid, None)
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
+                   log_id=log_id,
+                   num_entries=num_entries,
+                   register_ids=register_ids)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogLastEntryPastAbs(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS
+
+    offset: int = attrs.field()
+    num_entries: int = attrs.field()
+    register_ids: dict = attrs.field()
+
+    @classmethod
+    def decode(cls, logger: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (offset, index) = cls._read_field(data, 'log-id', index, 2, int)
+        (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+        (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
+        register_ids = {}
+        for i in range(num_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids[rid] = constants.REGISTERS.get(rid, None)
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
+                   offset=offset,
+                   num_entries=num_entries,
+                   register_ids=register_ids)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
 class GetLogConfiguration(LoggerCommand):
     subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_CONFIGURATION
 
@@ -826,9 +880,9 @@ class LoggerConfigResponse(LoggerResponse):
         (interval_format, index) = cls._read_field(data, 'interval-format', index, 1, int)
         (interval, index) = cls._read_field(data, 'interval', index, 1, int)
         (depth, index) = cls._read_field(data, 'depth', index, 2, int)
-        (no_regs, index) = cls._read_field(data, 'number-of-registers', index, 1, int)
+        (num_regs, index) = cls._read_field(data, 'number-of-registers', index, 1, int)
         register_ids = {}
-        for i in range(no_regs):
+        for i in range(num_regs):
             (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
             register_ids[rid] = constants.REGISTERS.get(rid, None)
         cls._no_more_data(data, index)
