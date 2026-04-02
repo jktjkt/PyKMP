@@ -196,6 +196,14 @@ def test_client_pyserial_communicator_send_request(
                                          ),
         ),
         pytest.param(
+            '80 3f b8 ff 02 8c e4 0d',
+            messages.InvalidLoggerSubcommandError(subcommand=255),
+        ),
+        pytest.param(
+            '80 3f b8 05 ff 4e 5c 0d',
+            messages.InvalidLoggerTypeError(logger_type=255),
+        ),
+        pytest.param(
             '80 3f b8 07 07 ff ff 00 01 01 03 ea b8 5e 0d',
             messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
                                             logger=constants.LoggerType.INTERVAL_MIN2,
@@ -204,6 +212,23 @@ def test_client_pyserial_communicator_send_request(
                                             register_ids=[1002],
                                             data_raw=b'\x07\x07\xff\xff\x00\x01\x01\x03\xea',
                                             ),
+        ),
+        pytest.param(
+            '80 3f b8 07 07 ff ff 00 01 ff 03 ea 40 0d 0d',
+            codec.DataLengthUnexpectedError(
+                what="GetLogLastEntryPastAbs: cannot read 2 more bytes for register-1 at offset 9",
+                length_expected=11,
+                expected_is_minimum=True,
+                actual=9,
+            ),
+        ),
+        pytest.param(
+            '80 3f b8 07 07 ff ff 00 01 01 03 ea 00 78 d3 0d',
+            codec.DataLengthUnexpectedError(
+                what='GetLogLastEntryPastAbs',
+                length_expected=9,
+                actual=10,
+            ),
         ),
         pytest.param(
             '80 3f b8 1b f9 02 00 00 00 02 00 02 01 03 eb 75 07 0d',
