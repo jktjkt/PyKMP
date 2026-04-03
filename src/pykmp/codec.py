@@ -132,8 +132,11 @@ class UnsupportedDecimalExponentError(BaseCodecError):
         )
 
 
+@attrs.frozen(kw_only=True)
 class CrcChecksumInvalidError(BaseCodecError):
     """CRC checksum validation of the data link byte sequence did not pass."""
+
+    hex_dump: bytes
 
 
 @attrs.frozen(kw_only=True)
@@ -345,7 +348,7 @@ class DataLinkCodec:
             else hex(self.crc_calculator.checksum(raw[:-2])).removeprefix("0x"),
         )
         if not crc_verifies:
-            raise CrcChecksumInvalidError
+            raise CrcChecksumInvalidError(hex_dump=raw.hex())
 
         return DataLinkData(
             destination_address=destination_address,
