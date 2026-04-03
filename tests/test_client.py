@@ -348,7 +348,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
                 subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
                 logger=constants.LoggerType.INTERVAL_MIN2,
                 first_log_id=0,
-                last_log_id=0,
+                last_log_id_in_meter=0,
                 info=constants.LoggerInfo.NO_LOG_ENTRIES,
                 log=[
                     [
@@ -363,7 +363,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
             messages.GetLogIDPastAbsResponse(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
                                              logger=constants.LoggerType.INTERVAL_YEAR,
                                              first_log_id=2,
-                                             last_log_id=2,
+                                             last_log_id_in_meter=2,
                                              info=constants.LoggerInfo.TAIL_INCLUDED | constants.LoggerInfo.HEAD_INCLUDED,
                                              log=[
                                                  [

@@ -930,7 +930,7 @@ def _decode_log_readout(cls, logger: constants.LoggerType, index: int, data: cod
     (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
     (num_regs, index) = cls._read_field(data, 'num-registers', index, 1, int)
     (first_log_id, index) = cls._read_field(data, 'first-log-id', index, 4, int)
-    (last_log_id, index) = cls._read_field(data, 'last-log-id', index, 4, int)
+    (last_log_id_in_meter, index) = cls._read_field(data, 'last-log-id', index, 4, int)
     (info, index) = cls._read_field(data, 'info', index, 2, int)
 
     register_ids = []
@@ -979,7 +979,7 @@ def _decode_log_readout(cls, logger: constants.LoggerType, index: int, data: cod
 
     return cls(subcommand=cls.subcommand, logger=logger, data_raw=data.data,
                first_log_id=first_log_id,
-               last_log_id=last_log_id,
+               last_log_id_in_meter=last_log_id_in_meter,
                info=constants.LoggerInfo(info),
                log=log)
 
@@ -989,7 +989,7 @@ class GetLogIDPastAbsResponse(LoggerResponse):
     subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS
 
     first_log_id: int = attrs.field()
-    last_log_id: int = attrs.field()
+    last_log_id_in_meter: int = attrs.field()
     info: constants.LoggerInfo = attrs.field()
     log: list = attrs.field()
 
@@ -1002,7 +1002,7 @@ class GetLogLastEntryPastAbsResponse(LoggerResponse):
     subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS
 
     first_log_id: int = attrs.field()
-    last_log_id: int = attrs.field()
+    last_log_id_in_meter: int = attrs.field()
     info: constants.LoggerInfo = attrs.field()
     log: list = attrs.field()
 
