@@ -18,6 +18,7 @@ from .messages import (
     RegisterData,
     RegisterID,
 )
+from .registers import RegisterOutput
 
 if PYSERIAL_AVAILABLE:
     from .client import PySerialClientCommunicator

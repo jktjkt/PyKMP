@@ -1,6 +1,5 @@
 import fileinput
 import pykmp
-from pykmp.tool import __main__ as tool_main
 
 tx_buf = b''
 rx_buf = b''
@@ -54,7 +53,7 @@ def handle_rx(buf):
             if regs := getattr(parsed, 'registers', None):
                 for (num, reg) in regs.items():
                     name = pykmp.constants.REGISTERS.get(num, f"R-{num}")
-                    output = tool_main.RegisterOutput.from_register_data(reg)
+                    output = pykmp.registers.RegisterOutput.from_register_data(reg)
                     print(f'  | {output.to_pretty_line()}')
             if register_ids := getattr(parsed, 'register_ids', None):
                 for rid in register_ids:
@@ -62,7 +61,7 @@ def handle_rx(buf):
             if log := getattr(parsed, 'log', None):
                 for i, row in enumerate(log):
                     for reg in row:
-                        output = tool_main.RegisterOutput.from_register_data(reg)
+                        output = pykmp.registers.RegisterOutput.from_register_data(reg)
                         print(f'{i:>2} | {output.to_pretty_line()}')
         except pykmp.client.UnknownCidError as e:
             print(f'<<< Unknown {e.cid:#02x}: {e.raw_data.hex(" ")}')
