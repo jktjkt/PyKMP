@@ -8,6 +8,8 @@ import unittest.mock
 from typing import TYPE_CHECKING, cast
 
 import pytest
+import decimal
+import logging
 import serial
 import serial.serialutil
 from typing_extensions import assert_type
@@ -20,6 +22,7 @@ from pykmp.client import (
     PySerialClientCommunicator,
     UnknownCidError,
 )
+from pykmp.registers import RegisterOutput
 
 if TYPE_CHECKING:
     import mock_serial.mock_serial  # pyright: ignore[reportMissingTypeStubs]
@@ -419,3 +422,56 @@ def test_blind_response_decoding(payload, parsed) -> None:
     else:
         decoded = communicator.decode_response(bytes.fromhex(payload))
         assert decoded == parsed
+
+@pytest.mark.parametrize(
+    ("id_", "unit", "blob_with_size", "value_str", "value_dec", "unit_str"),
+    [
+        pytest.param(
+            1001,
+            51,
+            b'\x04\x00\x00\x00\x00\x00',
+            '0',
+            decimal.Decimal('0'),
+            'no unit (number)',
+        ),
+        pytest.param(
+            1002,
+            47,
+            b'\x04\x00\x00\x00\x00\x04',
+            '00:00:04',
+            None,
+            'hh:mm:ss',
+        ),
+        pytest.param(
+            1003,
+            48,
+            b'\x04\x00\x00\x03\xaeO',
+            '2024-12-31',
+            None,
+            'yy:mm:dd',
+        ),
+        pytest.param(
+            348,
+            79,
+            b'\x07\x00\x00\x18\x0c\x1f\x00\x00\x04',
+            '2024-12-31 00:00:04-00:00',
+            None,
+            'DST YY-MM-DD hh:mm:ss',
+        ),
+        pytest.param(
+            60,
+            8,
+            b'\x04C\x00\x05\xc4\xa6',
+            '378.022',
+            decimal.Decimal('378.022'),
+            'GJ',
+        ),
+    ]
+)
+def test_register_parsing(id_, unit, blob_with_size, value_str, value_dec, unit_str):
+    data = messages.RegisterData(id_=id_, unit=unit, value=blob_with_size)
+    parsed = RegisterOutput.from_register_data(data)
+    logging.debug('%s', parsed.to_pretty_line())
+    assert parsed.value_str == value_str
+    assert parsed.value_dec == value_dec
+    assert parsed.unit_str == unit_str
