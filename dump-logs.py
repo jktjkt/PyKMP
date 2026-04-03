@@ -1,0 +1,287 @@
+import copy
+import datetime
+import errno
+import json
+import logging
+import pykmp
+from pykmp import client, codec, constants, messages, registers
+import os
+import sys
+import time
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    # level=logging.DEBUG,
+    level=logging.INFO,
+)
+
+def send_and_recv(comm, request):
+    NUM_TRIES = 3
+    for retry in range(NUM_TRIES):
+        try:
+            logger.debug('>>> %s', request)
+            resp = comm.send_request(message=request, destination_address=constants.DestinationAddress.HEAT_METER.value)
+            break
+        except codec.CrcChecksumInvalidError as e:
+            if retry < NUM_TRIES - 1:
+                logger.warning('CRC error, will retry (current attempt #%s): %s', retry + 1, e)
+                time.sleep(2)
+                continue
+            logger.error('CRC error, giving up after %s retries', retry + 1)
+            raise
+    logger.debug('<<< %s', resp)
+    return resp
+
+def extract_reg_by_id(regs, num):
+    return [x for x in regs.values() if x.id_ == messages.RegisterID(num)][0]
+
+comm = client.PySerialClientCommunicator(
+    serial_device=sys.argv[1]
+)
+
+resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in [1001]]))
+sn = registers.RegisterOutput.from_register_data(extract_reg_by_id(resp.registers, 1001)).value_str
+logger.info(f'Meter S/N {sn}')
+if not sn.isdigit():
+    logger.error('Malformed meter SN: not all digits: %s', sn)
+    sys.exit(1)
+OUT_PREFIX='out'
+os.makedirs(f'{OUT_PREFIX}/{sn}', exist_ok=True)
+
+FAILURES = []
+
+what_to_read = {
+    constants.LoggerType.INTERVAL_YEAR: [
+        # timestamp
+        348,
+
+        # E1, V1,
+        60, 68,
+        # Temp x m3 E8, E9
+        97, 110,
+        # M1 mass: why not, it's an yearly logger...
+        72,
+
+        # flow v1 max per year: date, time, value
+        123, 383, 124,
+        # flow v1 min per year
+        125, 384, 126,
+        # max power
+        127, 385, 128,
+        # min power
+        129, 386, 130,
+
+        # operating/error hours
+        1004, 175,
+        # info codes/bits, data quality
+        369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_MONTH: [
+        # timestamp
+        348,
+
+        # E1, V1,
+        60, 68,
+        # Temp x m3 E8, E9
+        97, 110,
+
+        # max monthly flow
+        138, 387, 139,
+        # min monthly flow
+        140, 388, 141,
+        # max monthly power
+        142, 389, 143,
+        # min monthly power
+        144, 390, 145,
+
+        # operating/error hours
+        1004, 175,
+        # info codes/bits, data quality
+        369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_DAY: [
+        # timestamp
+        348,
+
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
+
+        # avg T1 & T2
+        379, 380,
+
+        # info codes/bits, data quality
+        369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_HOUR: [
+        # timestamp
+        348,
+
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
+
+        # avg T1 & T2
+        381, 382,
+
+        # let's skip info codes/bits, data quality -- prefer readout speed
+        # 369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_MIN1: [
+        # timestamp
+        348,
+        # E1, V1, T1, T2, flow-V1, power
+        60, 68, 86, 87, 74, 80,
+    ],
+}
+
+# get the current readings and check time
+FILE_NAME = f'{OUT_PREFIX}/{sn}/snapshots.json'
+OUT = {}
+try:
+    with open(FILE_NAME, 'r') as f:
+        OUT = json.load(f)
+except OSError as e:
+    if e.errno == errno.ENOENT:
+        logger.debug('No previous data snapshot')
+    else:
+        raise
+resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in (
+    # timestamp
+    348,
+    # info code in bit format
+    369,
+    # E1, V1
+    # 60, 68,
+    # hi-res E1, V1
+    266, 239,
+    # T1, T2, flow-V1, power
+    86, 87, 74, 80,
+)]))
+regs = [registers.RegisterOutput.from_register_data(reg) for reg in resp.registers.values()]
+OUT[datetime.datetime.now().isoformat()] = [
+    {
+        'rid': parsed.id_int,
+        'name': parsed.name,
+        'value': parsed.value_str,
+        'unit': parsed.unit_str
+    } for parsed in regs]
+with open(FILE_NAME + '.new', 'w') as f:
+    json.dump(OUT, f, indent=2)
+os.rename(FILE_NAME + '.new', FILE_NAME)
+
+for logger_type, reg_ids in what_to_read.items():
+    FILE_NAME = f'{OUT_PREFIX}/{sn}/{logger_type.name}.json'
+    OUT = {}
+    lid_on_disk = 0
+    try:
+        with open(FILE_NAME, 'r') as f:
+            OUT = json.load(f)
+        log_ids = [int(k) for k, v in OUT.items() if len([entry for entry in v if 'error' in entry.keys()]) == 0]
+        errored_ids = [k for k, v in OUT.items() if len([entry for entry in v if 'error' in entry.keys()]) > 0]
+        if len(errored_ids):
+            logger.warning('Stored log has errors, ignoring these LIDs: %s', errored_ids)
+        log_ids.sort()
+        lid_on_disk = log_ids[-1]
+    except OSError as e:
+        if e.errno == errno.ENOENT:
+            logger.info('Reading %s form scratch', logger_type.name)
+        else:
+            raise
+
+    DATA = []
+
+    # read the oldest/newest log-id in the meter
+    resp = send_and_recv(comm,
+                         messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
+                                                         logger_type=logger_type,
+                                                         offset=65535,
+                                                         num_entries=1,
+                                                         register_ids=[1002] # time, we can ignore this
+                                                         ),
+                         )
+    oldest_lid_in_meter = resp.first_log_id
+    newest_lid_in_meter = resp.last_log_id_in_meter
+    lid_lowest = max(lid_on_disk, oldest_lid_in_meter)
+    logger.info(f'Logger {logger_type.name}: on-disk {lid_on_disk}, in meter {oldest_lid_in_meter} - {newest_lid_in_meter}')
+    if lid_lowest >= newest_lid_in_meter:
+        logger.info(' -> no new entries')
+        continue
+
+    logger.info(f' will read {newest_lid_in_meter - lid_lowest + 1} entries ({lid_lowest} .. {newest_lid_in_meter})')
+    for rid in reg_ids:
+        # reading each register separately saves bandwidth because each format thingy is only repeated once
+
+        # too bad we "have" to start at the newest entry...
+        lid = newest_lid_in_meter
+        while lid >= lid_lowest:
+            logger.info(f'Progress for {logger_type.name}: {len(DATA)} / {len(reg_ids) * (newest_lid_in_meter - lid_lowest + 1)}')
+            try:
+                resp = send_and_recv(comm,
+                                     messages.GetLogIDPastAbs(
+                                         subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                         logger_type=logger_type,
+                                         log_id=lid,
+                                         num_entries=min(lid - lid_lowest + 1, 0xffff),
+                                         register_ids=[rid],
+                                         )
+                                     )
+            except codec.CrcChecksumInvalidError as e:
+                FAILURES.append(f'{logger_type.name} LID {lid} RID {rid}: {repr(e)}')
+                logger.error('CRC error when reading LID %s RID %s: %s', lid, rid, repr(e))
+                DATA.append({
+                    'lid': lid,
+                    'rid': rid,
+                    'error': str(e),
+                })
+                lid -= 1
+                continue
+
+            if len(resp.log) < 1:
+                logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, lid)
+                break
+            lid -= len(resp.log)
+            for i, row in enumerate(resp.log):
+                this_lid = resp.first_log_id - i
+                reg = row[0]
+                parsed = registers.RegisterOutput.from_register_data(reg)
+                new_entry = {
+                    'lid': this_lid,
+                    'rid': reg.id_,
+                    'name': parsed.name,
+                    'value': parsed.value_str,
+                    'unit': parsed.unit_str,
+                }
+                if this_lid == lid_on_disk:
+                    # sanity check whether we're still reading the same data
+                    old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
+                    if not OUT:
+                        # no stored data, so nothing to check against
+                        pass
+                    elif len(old_entry) != 1:
+                        # most likely a "data gap"
+                        logger.warning('No old entry for LID %s RID %s', this_lid, rid)
+                    elif old_entry[0].get('value') != parsed.value_str:
+                        # meh
+                        logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
+                        FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
+                    else:
+                        # yay, sanity check passes, do not save a duplicate entry
+                        continue
+                DATA.append(new_entry)
+
+    all_lids = [x['lid'] for x in DATA]
+    all_lids.sort()
+    for lid in set(all_lids):
+        def without_lid(x):
+            r = copy.copy(x)
+            del r['lid']
+            return r
+        matching = [without_lid(x) for x in DATA if x['lid'] == lid]
+        matching.sort(key=lambda x: x['rid'])
+        OUT[lid] = matching
+    with open(FILE_NAME + '.new', 'w') as f:
+        json.dump(OUT, f, indent=2)
+    os.rename(FILE_NAME + '.new', FILE_NAME)
+
+for f in FAILURES:
+    logger.error(f'FAILED entries: {f}')
