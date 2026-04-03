@@ -968,8 +968,8 @@ def _decode_log_readout(cls, logger: constants.LoggerType, index: int, data: cod
                 (val, index) = cls._read_field(data, '{i}-value-{n}', index, register_value_lengths[n])
                 blob = register_value_lengths[n].to_bytes(1, 'big') + register_sie[n] + val
                 v = RegisterData(
-                    id_=cast(RegisterID, rid),
-                    unit=cast(RegisterUnit, fmt_unit),
+                    id_=cast(RegisterID, register_ids[n]),
+                    unit=cast(RegisterUnit, register_units[n]),
                     value=cast(RegisterValueBytes, blob),
                 )
                 row.append(v)

@@ -375,6 +375,37 @@ def test_blind_command_decoding(payload, parsed) -> None:
                                              data_raw=b'\x06\x02\x00\x02\x01\x00\x00\x00\x02\x00\x00\x00\x02\x00\xc0\x03\xeb0\x04\x00\x00\x03\xf8\x05\x00\x03\xd0\xf5',
                                              ),
         ),
+        pytest.param(
+            '403FB81BF904000303000000BC00000285001BBF03EA2F04000000000403EB3004000003AE4F015C4F070000180C1F000004000000040003AE4E00180C1E000004000000040003AE4D00180C1D000004F22D0D',
+            messages.GetLogIDPastAbsResponse(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                             logger=constants.LoggerType.INTERVAL_DAY,
+                                             first_log_id=188,
+                                             last_log_id_in_meter=645,
+                                             info=constants.LoggerInfo.TAIL_INCLUDED,
+                                             log=[
+                                                 [
+                                                     messages.RegisterData(id_=1002, unit=47, value=b'\x04\x00\x00\x00\x00\x04'),
+                                                     messages.RegisterData(id_=1003, unit=48, value=b'\x04\x00\x00\x03\xaeO'),
+                                                     messages.RegisterData(id_=348, unit=79, value=b'\x07\x00\x00\x18\x0c\x1f\x00\x00\x04'),
+                                                 ],
+                                                 [
+                                                     messages.RegisterData(id_=1002, unit=47, value=b'\x04\x00\x00\x00\x00\x04'),
+                                                     messages.RegisterData(id_=1003, unit=48, value=b'\x04\x00\x00\x03\xaeN'),
+                                                     messages.RegisterData(id_=348, unit=79, value=b'\x07\x00\x00\x18\x0c\x1e\x00\x00\x04'),
+                                                 ],
+                                                 [
+                                                     messages.RegisterData(id_=1002, unit=47, value=b'\x04\x00\x00\x00\x00\x04'),
+                                                     messages.RegisterData(id_=1003, unit=48, value=b'\x04\x00\x00\x03\xaeM'),
+                                                     messages.RegisterData(id_=348, unit=79, value=b'\x07\x00\x00\x18\x0c\x1d\x00\x00\x04'),
+                                                 ],
+                                             ],
+                                             data_raw=b'\x06\x04\x00\x03\x03\x00\x00\x00\xbc\x00\x00\x02\x85\x00@\x03'
+                                                + b'\xea/\x04\x00\x00\x00\x00\x04\x03\xeb0\x04\x00\x00\x03\xaeO\x01\\'
+                                                + b'O\x07\x00\x00\x18\x0c\x1f\x00\x00\x04\x00\x00\x00\x04\x00\x03\xae'
+                                                + b'N\x00\x18\x0c\x1e\x00\x00\x04\x00\x00\x00\x04\x00\x03\xaeM\x00\x18'
+                                                + b'\x0c\x1d\x00\x00\x04',
+                                             ),
+        ),
     ]
 )
 def test_blind_response_decoding(payload, parsed) -> None:
