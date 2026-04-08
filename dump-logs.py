@@ -184,7 +184,7 @@ for logger_type, reg_ids in what_to_read.items():
                                          subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
                                          logger_type=logger_type,
                                          log_id=lid,
-                                         num_entries=min(lid - lid_lowest + 1, 100),
+                                         num_entries=min(lid - lid_lowest + 1, 0xffff),
                                          register_ids=[rid],
                                          )
                                      )
