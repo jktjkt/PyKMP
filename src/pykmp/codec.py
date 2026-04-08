@@ -139,6 +139,25 @@ class CrcChecksumInvalidError(BaseCodecError):
     hex_dump: bytes
 
 
+class TruncatedStuffingError(BaseCodecError):
+    """Byte stuffing indicates one more byte at the end of the input"""
+
+    def __str__(self) -> str:  # noqa: D105
+        return "Byte stuffing indicates one more byte at the end of the input"
+
+
+@attrs.frozen(kw_only=True)
+class InvalidStuffingByteError(BaseCodecError):
+    """Byte stuffing encountered an unrecognized encoded byte"""
+
+    raw_byte: int
+
+    def __str__(self) -> str:  # noqa: D105
+        return (
+            f"Byte stuffing encountered an unrecognized encoded byte {self.raw_byte:02X}"
+        )
+
+
 @attrs.frozen(kw_only=True)
 class ApplicationData:
     """Data class for the data in the application layer of the Kamstrup KMP protocol."""
@@ -183,22 +202,6 @@ class PhysicalCodec:
     direction: PhysicalDirection = attrs.field()
     _start_byte: int = attrs.field(init=False)  # depends on direction
 
-    BYTE_STUFFING_MAP: Final[dict[bytes, bytes]] = {
-        the_byte.to_bytes(1, "big"): (
-            constants.ByteCode.STUFFING.value.to_bytes(1, "big")
-            + (the_byte ^ 0xFF).to_bytes(1, "big")
-        )
-        for the_byte in (
-            # Order matters for having BYTE_STUFFING as the first; itself is used in the
-            # escaped sequence.
-            constants.ByteCode.STUFFING.value,
-            constants.ByteCode.ACK.value,
-            constants.ByteCode.START_FROM_METER.value,
-            constants.ByteCode.START_TO_METER.value,
-            constants.ByteCode.STOP.value,
-        )
-    }
-
     def __attrs_post_init__(self) -> None:
         """Select start byte value according to configuration (direction)."""
         self._start_byte = self._direction_to_start_byte(self.direction)
@@ -241,10 +244,33 @@ class PhysicalCodec:
             )
 
         data_bytes = frame[1:-1]
-        for unescaped_byte, escaped_bytes in self.BYTE_STUFFING_MAP.items():
-            data_bytes = data_bytes.replace(escaped_bytes, unescaped_byte)
+        res = bytes()
+        i = 0
+        in_stuffing = False
 
-        return cast(DataLinkBytes, data_bytes)
+        while i < len(data_bytes):
+            if in_stuffing:
+                in_stuffing = False
+                xored = data_bytes[i] ^ 0xff
+                if xored not in (
+                    constants.ByteCode.STUFFING.value,
+                    constants.ByteCode.ACK.value,
+                    constants.ByteCode.START_FROM_METER.value,
+                    constants.ByteCode.START_TO_METER.value,
+                    constants.ByteCode.STOP.value,
+                ):
+                    raise InvalidStuffingByteError(raw_byte=data_bytes[i])
+                res += xored.to_bytes(1, "big")
+            elif data_bytes[i] == constants.ByteCode.STUFFING.value:
+                in_stuffing = True
+            else:
+                res += data_bytes[i].to_bytes(1, "big")
+            i += 1
+
+        if in_stuffing:
+            raise TruncatedStuffingError
+
+        return cast(DataLinkBytes, res)
 
     def encode(self, data_bytes: DataLinkBytes) -> PhysicalBytes:
         """
@@ -260,12 +286,24 @@ class PhysicalCodec:
             )
 
         raw = cast(bytes, data_bytes)
-        for unescaped_byte, escaped_bytes in self.BYTE_STUFFING_MAP.items():
-            raw = raw.replace(unescaped_byte, escaped_bytes)
+        res = bytes()
+        i = 0
+        while i < len(raw):
+            if raw[i] in (
+                constants.ByteCode.STUFFING.value,
+                constants.ByteCode.ACK.value,
+                constants.ByteCode.START_FROM_METER.value,
+                constants.ByteCode.START_TO_METER.value,
+                constants.ByteCode.STOP.value,
+            ):
+                res += ((constants.ByteCode.STUFFING.value << 8) | (raw[i] ^ 0xff)).to_bytes(2, "big")
+            else:
+                res += raw[i].to_bytes(1, "big")
+            i += 1
 
         frame = (
             self._start_byte.to_bytes(1, "big")
-            + raw
+            + res
             + constants.ByteCode.STOP.value.to_bytes(1, "big")
         )
         return cast(PhysicalBytes, frame)
