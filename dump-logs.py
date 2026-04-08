@@ -156,7 +156,7 @@ for logger_type, reg_ids in what_to_read.items():
     # read the oldest/newest log-id in the meter
     resp = send_and_recv(comm,
                          messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
-                                                         logger=logger_type,
+                                                         logger_type=logger_type,
                                                          offset=65535,
                                                          num_entries=1,
                                                          register_ids=[1002] # time, we can ignore this
@@ -182,7 +182,7 @@ for logger_type, reg_ids in what_to_read.items():
                 resp = send_and_recv(comm,
                                      messages.GetLogIDPastAbs(
                                          subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                         logger=logger_type,
+                                         logger_type=logger_type,
                                          log_id=lid,
                                          num_entries=min(lid - lid_lowest + 1, 100),
                                          register_ids=[rid],
