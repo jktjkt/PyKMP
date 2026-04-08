@@ -29,6 +29,8 @@ from pykmp.codec import (
     PhysicalCodec,
     PhysicalDirection,
     UnsupportedDecimalExponentError,
+    InvalidStuffingByteError,
+    TruncatedStuffingError,
 )
 
 from . import util
@@ -50,6 +52,13 @@ from . import util
             ),
             DataLinkBytes(b"\x3F\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24\x63\x03"),
             id="Kamstrup doc 6.2.4 GetRegister response (destuffing needed)",
+        ),
+        pytest.param(
+            PhysicalDirection.FROM_METER,
+            # the key part is that the 000B1BE47F 000B0FC8 should not cause recursive decoding
+            PhysicalBytes(bytes.fromhex('40 3F B8 1BF9 04 43 000B1BE47F 000B0FC8 0d')),
+            DataLinkBytes(bytes.fromhex('3F B8 06 04 43 000B1B7F 000B0FC8')),
+            id='GetLogIDPastAbsResponse snippet which was by mistake destuffed too much',
         ),
     ],
 )
@@ -115,6 +124,20 @@ def test_codec_physical_decode_ack(
             DataLengthUnexpectedError,
             "Frame is of zero length.",
             id="empty",
+        ),
+        pytest.param(
+            PhysicalDirection.FROM_METER,
+            PhysicalBytes(bytes.fromhex('40 3F 1BFF 0D')),
+            InvalidStuffingByteError,
+            "Byte stuffing encountered an unrecognized encoded byte FF",
+            id="Unrecongized stuffing value",
+        ),
+        pytest.param(
+            PhysicalDirection.FROM_METER,
+            PhysicalBytes(bytes.fromhex('40 3F 1B 0D')),
+            TruncatedStuffingError,
+            "Byte stuffing indicates one more byte at the end of the input",
+            id="Truncated stuffing value",
         ),
     ],
 )
