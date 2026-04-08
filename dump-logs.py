@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 def send_and_recv(comm, request):
-    NUM_TRIES = 5
+    NUM_TRIES = 3
     for retry in range(NUM_TRIES):
         try:
             logger.debug('>>> %s', request)
@@ -23,14 +23,10 @@ def send_and_recv(comm, request):
             break
         except codec.CrcChecksumInvalidError as e:
             if retry < NUM_TRIES - 1:
-                logger.warning('CRC error, will retry (current attempt #%s): %s', retry, e)
-                limit_entries = 1
-                if isinstance(request, messages.GetLogIDPastAbs) and request.num_entries > limit_entries:
-                    logger.warning('Preemptively reducing GetLogIDPastAbs num_entries from %s to %s', request.num_entries, limit_entries)
-                    request.num_entries = limit_entries
+                logger.warning('CRC error, will retry (current attempt #%s): %s', retry + 1, e)
                 time.sleep(2)
                 continue
-            logger.error('CRC error, giving up after %s retries', retry)
+            logger.error('CRC error, giving up after %s retries', retry + 1)
             raise
     logger.debug('<<< %s', resp)
     return resp
