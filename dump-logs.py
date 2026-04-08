@@ -146,7 +146,7 @@ for logger_type, reg_ids in what_to_read.items():
         log_ids = [int(k) for k, v in OUT.items() if len([entry for entry in v if 'error' in entry.keys()]) == 0]
         errored_ids = [k for k, v in OUT.items() if len([entry for entry in v if 'error' in entry.keys()]) > 0]
         if len(errored_ids):
-            logger.warn('Stored log has errors, ignoring these LIDs: %s', errored_ids)
+            logger.warning('Stored log has errors, ignoring these LIDs: %s', errored_ids)
         log_ids.sort()
         lid_on_disk = log_ids[-1]
     except OSError as e:
