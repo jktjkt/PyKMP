@@ -55,66 +55,85 @@ FAILURES = []
 
 what_to_read = {
     constants.LoggerType.INTERVAL_YEAR: [
-        348, # date and time
-        60, # heat energy
-        68, # V1 (m3)
+        # timestamp
+        348,
 
-        1004, # operating hours
-        175, # error hour counter
-        99, # info code
-        369, # info bits
+        # E1, V1,
+        60, 68,
+        # Temp x m3 E8, E9
+        97, 110,
+        # M1 mass: why not, it's an yearly logger...
+        72,
 
         # flow v1 max per year: date, time, value
         123, 383, 124,
-
         # flow v1 min per year
         125, 384, 126,
-
         # max power
         127, 385, 128,
-
         # min power
         129, 386, 130,
 
-        97, # m3 x t1 (E8)
-        110, # m3 x t2 (E9)
-        72, # M1 mass
-
-        338, # data quality
+        # operating/error hours
+        1004, 175,
+        # info codes/bits, data quality
+        369, 99, 338,
     ],
     constants.LoggerType.INTERVAL_MONTH: [
+        # timestamp
         348,
-        60,
-        97,
-        110,
-        68,
-        369,
-        99,
 
+        # E1, V1,
+        60, 68,
+        # Temp x m3 E8, E9
+        97, 110,
+
+        # max monthly flow
         138, 387, 139,
+        # min monthly flow
         140, 388, 141,
+        # max monthly power
         142, 389, 143,
+        # min monthly power
         144, 390, 145,
 
-        1004,
-        175,
+        # operating/error hours
+        1004, 175,
+        # info codes/bits, data quality
+        369, 99, 338,
     ],
     constants.LoggerType.INTERVAL_DAY: [
-        60,
-        68,
-        369,
-        99,
-        379,
-        380,
-        86,
-        87,
-        74,
-        80,
-        338,
+        # timestamp
         348,
+
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
+
+        # avg T1 & T2
+        379, 380,
+
+        # info codes/bits, data quality
+        369, 99, 338,
     ],
-    # constants.LoggerType.INTERVAL_HOUR: [348],
-    # constants.LoggerType.INTERVAL_MIN1: [348],
+    constants.LoggerType.INTERVAL_HOUR: [
+        # timestamp
+        348,
+
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
+
+        # avg T1 & T2
+        381, 382,
+
+        # let's skip info codes/bits, data quality -- prefer readout speed
+        # 369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_MIN1: [
+        # timestamp
+        348,
+        # E1, V1, T1, T2, flow-V1, power
+        60, 68, 86, 87, 74, 80,
+    ],
 }
 
 for logger_type, reg_ids in what_to_read.items():
