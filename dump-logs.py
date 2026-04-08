@@ -42,7 +42,7 @@ resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.Regis
 sn = registers.RegisterOutput.from_register_data(extract_reg_by_id(resp.registers, 1001)).value_str
 logger.info(f'Meter S/N {sn}')
 if not sn.isdigit():
-    logger.error('Malofrmed meter SN: not all digits: %s', sn)
+    logger.error('Malformed meter SN: not all digits: %s', sn)
     sys.exit(1)
 OUT_PREFIX='out'
 os.makedirs(f'{OUT_PREFIX}/{sn}', exist_ok=True)
