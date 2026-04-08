@@ -168,7 +168,7 @@ for logger_type, reg_ids in what_to_read.items():
                          )
     oldest_lid_in_meter = resp.first_log_id
     newest_lid_in_meter = resp.last_log_id_in_meter
-    lid_lowest = max(lid_on_disk + 1, oldest_lid_in_meter)
+    lid_lowest = max(lid_on_disk, oldest_lid_in_meter)
     logger.info(f'Logger {logger_type.name}: on-disk {lid_on_disk}, in meter {oldest_lid_in_meter} - {newest_lid_in_meter}')
     if lid_lowest >= newest_lid_in_meter:
         logger.info(' -> no new entries')
@@ -180,7 +180,7 @@ for logger_type, reg_ids in what_to_read.items():
 
         # too bad we "have" to start at the newest entry...
         lid = newest_lid_in_meter
-        while lid > lid_lowest:
+        while lid >= lid_lowest:
             logger.info(f'Progress for {logger_type.name}: {len(DATA)} / {len(reg_ids) * (newest_lid_in_meter - lid_lowest + 1)}')
             try:
                 resp = send_and_recv(comm,
@@ -188,7 +188,7 @@ for logger_type, reg_ids in what_to_read.items():
                                          subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
                                          logger=logger_type,
                                          log_id=lid,
-                                         num_entries=0xffff,
+                                         num_entries=min(lid - lid_lowest + 1, 100),
                                          register_ids=[rid],
                                          )
                                      )
@@ -211,13 +211,30 @@ for logger_type, reg_ids in what_to_read.items():
                 this_lid = resp.first_log_id - i
                 reg = row[0]
                 parsed = registers.RegisterOutput.from_register_data(reg)
-                DATA.append({
+                new_entry = {
                     'lid': this_lid,
                     'rid': reg.id_,
                     'name': parsed.name,
                     'value': parsed.value_str,
                     'unit': parsed.unit_str,
-                })
+                }
+                if this_lid == lid_on_disk:
+                    # sanity check whether we're still reading the same data
+                    old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
+                    if not OUT:
+                        # no stored data, so nothing to check against
+                        pass
+                    elif len(old_entry) != 1:
+                        # most likely a "data gap"
+                        logger.warning('No old entry for LID %s RID %s', this_lid, rid)
+                    elif old_entry[0].get('value') != parsed.value_str:
+                        # meh
+                        logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
+                        FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
+                    else:
+                        # yay, sanity check passes, do not save a duplicate entry
+                        continue
+                DATA.append(new_entry)
 
     all_lids = [x['lid'] for x in DATA]
     all_lids.sort()
