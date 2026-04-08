@@ -8,8 +8,11 @@ import sys
 import time
 
 logger = logging.getLogger(__name__)
-# logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    # level=logging.DEBUG,
+    level=logging.INFO,
+)
 
 def send_and_recv(comm, request):
     NUM_TRIES = 5
