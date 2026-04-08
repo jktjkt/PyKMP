@@ -194,7 +194,7 @@ def test_client_pyserial_communicator_send_request(
         pytest.param(
             '80 3f b8 05 02 70 ee 0d',
             messages.GetLogConfiguration(subcommand=constants.LoggerSubCommandId.GET_CONFIGURATION,
-                                         logger=constants.LoggerType.INTERVAL_YEAR,
+                                         logger_type=constants.LoggerType.INTERVAL_YEAR,
                                          data_raw=b'\x05\x02',
                                          ),
         ),
@@ -209,7 +209,7 @@ def test_client_pyserial_communicator_send_request(
         pytest.param(
             '80 3f b8 07 07 ff ff 00 01 01 03 ea b8 5e 0d',
             messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
-                                            logger=constants.LoggerType.INTERVAL_MIN2,
+                                            logger_type=constants.LoggerType.INTERVAL_MIN2,
                                             offset=65535,
                                             num_entries=1,
                                             register_ids=[1002],
@@ -236,7 +236,7 @@ def test_client_pyserial_communicator_send_request(
         pytest.param(
             '80 3f b8 1b f9 02 00 00 00 02 00 02 01 03 eb 75 07 0d',
             messages.GetLogIDPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                     logger=constants.LoggerType.INTERVAL_YEAR,
+                                     logger_type=constants.LoggerType.INTERVAL_YEAR,
                                      log_id=2,
                                      num_entries=2,
                                      register_ids=[1003],
@@ -284,7 +284,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
             + ' 52 01 5c 03 eb 03 ea d5 64 0d',
             messages.LoggerConfigResponse(
                 subcommand=constants.LoggerSubCommandId.GET_CONFIGURATION,
-                logger=constants.LoggerType.INTERVAL_YEAR,
+                logger_type=constants.LoggerType.INTERVAL_YEAR,
                 date1_format=1,
                 date1=b'\x01\x01',
                 date2_format=1,
@@ -349,7 +349,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
             '40 3f b8 07 07 00 01 01 00 00 00 00 00 00 00 00 00 01 03 ea 2f 04 00 00 00 00 00 1f 2f 0d',
             messages.GetLogLastEntryPastAbsResponse(
                 subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
-                logger=constants.LoggerType.INTERVAL_MIN2,
+                logger_type=constants.LoggerType.INTERVAL_MIN2,
                 first_log_id=0,
                 last_log_id_in_meter=0,
                 info=constants.LoggerInfo.NO_LOG_ENTRIES,
@@ -364,7 +364,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
         pytest.param(
             '40 3f b8 1b f9 02 00 02 01 00 00 00 02 00 00 00 02 00 c0 03 eb 30 04 00 00 03 f8 05 00 03 d0 f5 aa 3a 0d',
             messages.GetLogIDPastAbsResponse(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                             logger=constants.LoggerType.INTERVAL_YEAR,
+                                             logger_type=constants.LoggerType.INTERVAL_YEAR,
                                              first_log_id=2,
                                              last_log_id_in_meter=2,
                                              info=constants.LoggerInfo.TAIL_INCLUDED | constants.LoggerInfo.HEAD_INCLUDED,
@@ -381,7 +381,7 @@ def test_blind_command_decoding(payload, parsed) -> None:
         pytest.param(
             '403FB81BF904000303000000BC00000285001BBF03EA2F04000000000403EB3004000003AE4F015C4F070000180C1F000004000000040003AE4E00180C1E000004000000040003AE4D00180C1D000004F22D0D',
             messages.GetLogIDPastAbsResponse(subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                             logger=constants.LoggerType.INTERVAL_DAY,
+                                             logger_type=constants.LoggerType.INTERVAL_DAY,
                                              first_log_id=188,
                                              last_log_id_in_meter=645,
                                              info=constants.LoggerInfo.TAIL_INCLUDED,
