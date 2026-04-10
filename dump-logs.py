@@ -1,4 +1,5 @@
 import copy
+import datetime
 import errno
 import json
 import logging
@@ -132,6 +133,41 @@ what_to_read = {
         60, 68, 86, 87, 74, 80,
     ],
 }
+
+# get the current readings and check time
+FILE_NAME = f'{OUT_PREFIX}/{sn}/snapshots.json'
+OUT = {}
+try:
+    with open(FILE_NAME, 'r') as f:
+        OUT = json.load(f)
+except OSError as e:
+    if e.errno == errno.ENOENT:
+        logger.debug('No previous data snapshot')
+    else:
+        raise
+resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in (
+    # timestamp
+    348,
+    # info code in bit format
+    369,
+    # E1, V1
+    # 60, 68,
+    # hi-res E1, V1
+    266, 239,
+    # T1, T2, flow-V1, power
+    86, 87, 74, 80,
+)]))
+regs = [registers.RegisterOutput.from_register_data(reg) for reg in resp.registers.values()]
+OUT[datetime.datetime.now().isoformat()] = [
+    {
+        'rid': parsed.id_int,
+        'name': parsed.name,
+        'value': parsed.value_str,
+        'unit': parsed.unit_str
+    } for parsed in regs]
+with open(FILE_NAME + '.new', 'w') as f:
+    json.dump(OUT, f, indent=2)
+os.rename(FILE_NAME + '.new', FILE_NAME)
 
 for logger_type, reg_ids in what_to_read.items():
     FILE_NAME = f'{OUT_PREFIX}/{sn}/{logger_type.name}.json'
