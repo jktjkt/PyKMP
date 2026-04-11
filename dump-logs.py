@@ -1,4 +1,5 @@
 import copy
+import errno
 import json
 import logging
 import pykmp
@@ -146,7 +147,7 @@ for logger_type, reg_ids in what_to_read.items():
         log_ids.sort()
         lid_on_disk = log_ids[-1]
     except OSError as e:
-        if e.errno == 2:
+        if e.errno == errno.ENOENT:
             logger.info('Reading %s form scratch', logger_type.name)
         else:
             raise
