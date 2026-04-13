@@ -88,6 +88,7 @@ REGISTERS: Final[Mapping[int, str]] = {
     222: "ConfigChangedEventCount",
     224: "Pulse input A2",
     225: "Pulse input B2",
+    228: "Config number 3",
     229: "T1_average_autoint",
     230: "T2_average_autoint",
     234: "l/imp. for VA",
@@ -106,6 +107,7 @@ REGISTERS: Final[Mapping[int, str]] = {
     365: "Heat energy A2", # Heat energy with surcharge A2, t2 > t5 limit
     366: "T5 limit",
     367: "COP Month",
+    368: "Config number 4",
     369: "Info bits",
     371: "COP",
     372: "Power Input B1",
