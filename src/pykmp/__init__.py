@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """PyKMP is a package to read and parse Kamstrup Multical energy meters."""
+
 from __future__ import annotations
 
 from .client import PYSERIAL_AVAILABLE, ClientCommunicator

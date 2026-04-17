@@ -39,16 +39,16 @@ from . import util
     [
         pytest.param(
             PhysicalDirection.FROM_METER,
-            PhysicalBytes(b"\x40\x3F\x02\x01\x23\x45\x67\xE9\x56\x0D"),
-            DataLinkBytes(b"\x3F\x02\x01\x23\x45\x67\xE9\x56"),
+            PhysicalBytes(b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d"),
+            DataLinkBytes(b"\x3f\x02\x01\x23\x45\x67\xe9\x56"),
             id="Kamstrup doc 6.2.2 GetSerialNo response (no destuffing needed)",
         ),
         pytest.param(
             PhysicalDirection.FROM_METER,
             PhysicalBytes(
-                b"\x40\x3F\x10\x00\x1B\x7F\x16\x04\x11\x01\x2A\xF0\x24\x63\x03\x0D"
+                b"\x40\x3f\x10\x00\x1b\x7f\x16\x04\x11\x01\x2a\xf0\x24\x63\x03\x0d"
             ),
-            DataLinkBytes(b"\x3F\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24\x63\x03"),
+            DataLinkBytes(b"\x3f\x10\x00\x80\x16\x04\x11\x01\x2a\xf0\x24\x63\x03"),
             id="Kamstrup doc 6.2.4 GetRegister response (destuffing needed)",
         ),
     ],
@@ -90,14 +90,14 @@ def test_codec_physical_decode_ack(
     [
         pytest.param(
             PhysicalDirection.FROM_METER,
-            PhysicalBytes(b"\x80\x56\x0D"),
+            PhysicalBytes(b"\x80\x56\x0d"),
             BoundaryByteInvalidError,
             "Frame expected start byte is 64 (hex: 40), but got 128 (hex: 80)",
             id="wrong start byte (FROM_METER)",
         ),
         pytest.param(
             PhysicalDirection.TO_METER,
-            PhysicalBytes(b"\x40\x56\x0D"),
+            PhysicalBytes(b"\x40\x56\x0d"),
             BoundaryByteInvalidError,
             "Frame expected start byte is 128 (hex: 80), but got 64 (hex: 40)",
             id="wrong start byte (TO_METER)",
@@ -134,32 +134,32 @@ def test_codec_physical_decode_error(
     [
         pytest.param(
             PhysicalDirection.TO_METER,
-            DataLinkBytes(b"\x04\x0D\x00\x06"),
-            PhysicalBytes(b"\x80\x04\x1B\xF2\x00\x1B\xF9\x0D"),
+            DataLinkBytes(b"\x04\x0d\x00\x06"),
+            PhysicalBytes(b"\x80\x04\x1b\xf2\x00\x1b\xf9\x0d"),
             id="Kamstrup doc 3.1 Physical layer, plus start/stop byte",
         ),
         pytest.param(
             PhysicalDirection.TO_METER,
-            DataLinkBytes(b"\x3F\x01\x05\x8A"),
-            PhysicalBytes(b"\x80\x3F\x01\x05\x8A\x0D"),
+            DataLinkBytes(b"\x3f\x01\x05\x8a"),
+            PhysicalBytes(b"\x80\x3f\x01\x05\x8a\x0d"),
             id="Kamstrup doc 6.2.1 GetType request (no stuffing needed)",
         ),
         pytest.param(
             PhysicalDirection.TO_METER,
-            DataLinkBytes(b"\x3F\x10\x01\x00\x80\xD4\x08"),
-            PhysicalBytes(b"\x80\x3F\x10\x01\x00\x1B\x7F\xD4\x08\x0D"),
+            DataLinkBytes(b"\x3f\x10\x01\x00\x80\xd4\x08"),
+            PhysicalBytes(b"\x80\x3f\x10\x01\x00\x1b\x7f\xd4\x08\x0d"),
             id="Kamstrup doc 6.2.4 GetRegister request (stuffing needed)",
         ),
         pytest.param(
             PhysicalDirection.TO_METER,
             DataLinkBytes(constants.ByteCode.STUFFING.value.to_bytes(1, "big")),
-            PhysicalBytes(b"\x80\x1B\xE4\x0D"),
+            PhysicalBytes(b"\x80\x1b\xe4\x0d"),
             id="stuffing character stuffed",
         ),
         pytest.param(
             PhysicalDirection.FROM_METER,
-            DataLinkBytes(b"\x3F"),
-            PhysicalBytes(b"\x40\x3F\x0D"),
+            DataLinkBytes(b"\x3f"),
+            PhysicalBytes(b"\x40\x3f\x0d"),
             id="encode as meter (direction=RECEIVE)",
         ),
     ],
@@ -223,7 +223,7 @@ def test_codec_physical_encode_error(
     ("data_link_bytes", "expected"),
     [
         pytest.param(
-            DataLinkBytes(b"\x3F\x02\x01\x23\x45\x67\xE9\x56"),
+            DataLinkBytes(b"\x3f\x02\x01\x23\x45\x67\xe9\x56"),
             DataLinkData(
                 destination_address=0x3F,
                 application_bytes=ApplicationBytes(b"\x02\x01\x23\x45\x67"),
@@ -232,11 +232,11 @@ def test_codec_physical_encode_error(
             id="Kamstrup doc 6.2.2 GetSerialNo response",
         ),
         pytest.param(
-            DataLinkBytes(b"\x3F\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24\x63\x03"),
+            DataLinkBytes(b"\x3f\x10\x00\x80\x16\x04\x11\x01\x2a\xf0\x24\x63\x03"),
             DataLinkData(
                 destination_address=0x3F,
                 application_bytes=ApplicationBytes(
-                    b"\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24"
+                    b"\x10\x00\x80\x16\x04\x11\x01\x2a\xf0\x24"
                 ),
                 crc_value=0x6303,
             ),
@@ -286,7 +286,7 @@ def test_codec_data_link_decode_checksum_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     # Kamstrup doc 6.2.2 GetSerialNo response with broken checksum
-    broken_data_link_bytes = DataLinkBytes(b"\x3F\x02\x01\x23\x45\x67\xE9\x57")
+    broken_data_link_bytes = DataLinkBytes(b"\x3f\x02\x01\x23\x45\x67\xe9\x57")
 
     codec = DataLinkCodec()
     with pytest.raises(CrcChecksumInvalidError), caplog.at_level(logging.WARNING):
@@ -310,7 +310,7 @@ def test_codec_data_link_decode_checksum_error(
                 destination_address=0x3F,
                 application_bytes=ApplicationBytes(b"\x01"),
             ),
-            DataLinkBytes(b"\x3F\x01\x05\x8A"),
+            DataLinkBytes(b"\x3f\x01\x05\x8a"),
             id="Kamstrup doc 6.2.1 GetType request",
         ),
         pytest.param(
@@ -318,7 +318,7 @@ def test_codec_data_link_decode_checksum_error(
                 destination_address=0x3F,
                 application_bytes=ApplicationBytes(b"\x10\x01\x00\x80"),
             ),
-            DataLinkBytes(b"\x3F\x10\x01\x00\x80\xD4\x08"),
+            DataLinkBytes(b"\x3f\x10\x01\x00\x80\xd4\x08"),
             id="Kamstrup doc 6.2.4 GetRegister request",
         ),
     ],
@@ -369,22 +369,22 @@ def test_codec_data_link_encode_error(
     ("data", "crc"),
     [
         pytest.param(
-            DataLinkBytes(b"\x3F\x01"),
+            DataLinkBytes(b"\x3f\x01"),
             0x058A,
             id="Kamstrup doc 6.2.1 GetType request",
         ),
         pytest.param(
-            DataLinkBytes(b"\x3F\x01\x00\x04\x06\x01\x26\x99"),
+            DataLinkBytes(b"\x3f\x01\x00\x04\x06\x01\x26\x99"),
             0x0000,
             id="Kamstrup doc 6.2.1 GetType response",
         ),
         pytest.param(
-            DataLinkBytes(b"\x3F\x02"),
+            DataLinkBytes(b"\x3f\x02"),
             0x35E9,
             id="Kamstrup doc 6.2.2 GetSerialNo request",
         ),
         pytest.param(
-            DataLinkBytes(b"\x3F\x02\x01\x23\x45\x67\xE9\x56"),
+            DataLinkBytes(b"\x3f\x02\x01\x23\x45\x67\xe9\x56"),
             0x0000,
             id="Kamstrup doc 6.2.2 GetSerialNo response",
         ),
@@ -394,7 +394,7 @@ def test_codec_data_link_encode_error(
             id="Kamstrup doc 6.2.4 GetRegister request",
         ),
         pytest.param(
-            DataLinkBytes(b"\x3F\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24\x63\x03"),
+            DataLinkBytes(b"\x3f\x10\x00\x80\x16\x04\x11\x01\x2a\xf0\x24\x63\x03"),
             0x0000,
             id="Kamstrup doc 6.2.4 GetRegister response",
         ),
@@ -429,10 +429,10 @@ def test_codec_data_link_crc_calculator(
             id="Kamstrup doc 6.2.2 GetSerialNo request (no data for CID=10 request)",
         ),
         pytest.param(
-            ApplicationDataBytes(b"\x10\x00\x80\x16\x04\x11\x01\x2A\xF0\x24"),
+            ApplicationDataBytes(b"\x10\x00\x80\x16\x04\x11\x01\x2a\xf0\x24"),
             ApplicationData(
                 command_id=0x10,
-                data=ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2A\xF0\x24"),
+                data=ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2a\xf0\x24"),
             ),
             id="Kamstrup doc 6.2.4 GetRegister response",
         ),
@@ -523,25 +523,25 @@ def test_codec_application_encode_error(
     ("encoded", "expected_int_or_float", "expected_decimal"),
     [
         pytest.param(
-            b"\x04\xC2\x00\x00\x30\x39",
+            b"\x04\xc2\x00\x00\x30\x39",
             -123.45,
             decimal.Decimal("-123.45"),
             id="Kamstrup doc 4.2 example 1 [si=1, se=1, exp=2]",
         ),
         pytest.param(
-            b"\x04\x03\x05\x39\x7F\xB1",
+            b"\x04\x03\x05\x39\x7f\xb1",
             87_654_321_000,
             decimal.Decimal(87654321000),
             id="Kamstrup doc 4.2 example 2 [si=0, se=0, exp=3]",
         ),
         pytest.param(
-            b"\x01\x03\xFF",
+            b"\x01\x03\xff",
             255_000,
             decimal.Decimal(255000),
             id="Kamstrup doc 4.2 example 3 [si=0, se=0, exp=3]",
         ),
         pytest.param(
-            b"\x04\x11\x01\x2A\xF0\x24",
+            b"\x04\x11\x01\x2a\xf0\x24",
             19591204 * (10**17),
             decimal.Decimal(1959120400000000000000000),
             id="Kamstrup doc 6.2.4 GetRegister response [si=0, se=0, exp=17]",
@@ -553,7 +553,7 @@ def test_codec_application_encode_error(
             id="some real (regular) value from Multical 403 [si=0, se=1, exp=3]",
         ),
         pytest.param(
-            b"\x02\x42\x18\xC8",
+            b"\x02\x42\x18\xc8",
             63.440000000000005,
             decimal.Decimal("63.44"),
             id="demonstrating floating point error [si=0, se=1, exp=2]",
@@ -588,22 +588,22 @@ def test_codec_float_symmetry(
     ("encoded_orig", "expected_shortest"),
     [
         pytest.param(
-            b"\x04\xC2\x00\x00\x00\x39",
-            b"\x01\xC2\x39",
+            b"\x04\xc2\x00\x00\x00\x39",
+            b"\x01\xc2\x39",
             id="length 4 to 1",
         ),
         pytest.param(
-            b"\x04\xC2\x00\x00\x30\x39",
-            b"\x02\xC2\x30\x39",
+            b"\x04\xc2\x00\x00\x30\x39",
+            b"\x02\xc2\x30\x39",
             id="length 4 to 2",
         ),
         pytest.param(
-            b"\x04\x11\x01\x2A\xF0\x24",
-            b"\x04\x11\x01\x2A\xF0\x24",
+            b"\x04\x11\x01\x2a\xf0\x24",
+            b"\x04\x11\x01\x2a\xf0\x24",
             id="length 4 (unchanged)",
         ),
         pytest.param(
-            b"\x05\x11\x01\x01\x2A\xF0\x24",
+            b"\x05\x11\x01\x01\x2a\xf0\x24",
             b"\x04\x13\x02\x92\x59\x71",
             id="length 5 to 4",
         ),
@@ -627,19 +627,19 @@ def test_codec_float_shorter_form(
     ("float_encoded", "exc_type", "exc_message"),
     [
         pytest.param(
-            b"\x05\xC2\x00\x00\x30\x39",
+            b"\x05\xc2\x00\x00\x30\x39",
             DataLengthUnexpectedError,
             "Floating point data is of length 6, expected length is 7.",
             id="length byte 5 instead of 4",
         ),
         pytest.param(
-            b"\x03\xC2\x00\x00\x30\x39",
+            b"\x03\xc2\x00\x00\x30\x39",
             DataLengthUnexpectedError,
             "Floating point data is of length 6, expected length is 5.",
             id="length byte 3 instead of 4",
         ),
         pytest.param(
-            b"\x00\xC2",
+            b"\x00\xc2",
             OutOfRangeError,
             "Integer length byte value for floating point data decoding is under "
             "minimum of 1: 0.",

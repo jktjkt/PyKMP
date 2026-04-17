@@ -128,7 +128,7 @@ def test_messages_get_type_request_decode_error(
             id="software revision min",
         ),
         pytest.param(
-            codec.ApplicationDataBytes(b"\x00\x04\x1a\xFF"),
+            codec.ApplicationDataBytes(b"\x00\x04\x1a\xff"),
             b"\x00\x04",
             "Z255",
             id="software revision max",
@@ -187,7 +187,7 @@ def test_messages_get_type_response(
         ),
         pytest.param(
             constants.CommandId.GET_TYPE.value,
-            codec.ApplicationDataBytes(b"\x00\x04\x1B\x01"),
+            codec.ApplicationDataBytes(b"\x00\x04\x1b\x01"),
             codec.OutOfRangeError,
             "Software revision letter (int value) is out of range [1,26]: 27.",
             id="software revision letter out of range (over)",
@@ -339,7 +339,7 @@ def test_messages_get_serial_request_decode_error(
             id="serial-0x00000000",
         ),
         pytest.param(
-            codec.ApplicationDataBytes(b"\xFF\xFF\xFF\xFF"),
+            codec.ApplicationDataBytes(b"\xff\xff\xff\xff"),
             str(2**32 - 1),
             id="serial-0xFFFFFFFF",
         ),
@@ -451,7 +451,7 @@ def test_messages_get_serial_response_serial_value_invalid(
         ),
         pytest.param(
             codec.ApplicationDataBytes(
-                b"\x08\x00\x36\x00\x37\x00\x38\x00\x39\x00\x3A\x00\x3B\x00\x3C\x00\x3D"
+                b"\x08\x00\x36\x00\x37\x00\x38\x00\x39\x00\x3a\x00\x3b\x00\x3c\x00\x3d"
             ),
             [54, 55, 56, 57, 58, 59, 60, 61],
             id="max number (8) of registers",
@@ -545,8 +545,8 @@ def test_messages_get_register_request_decode_error(
         ),
         pytest.param(
             codec.ApplicationDataBytes(
-                b"\x09\x00\x36\x00\x37\x00\x38\x00\x39\x00\x3A\x00\x3B\x00\x3C\x00\x3D"
-                b"\x00\x3E"
+                b"\x09\x00\x36\x00\x37\x00\x38\x00\x39\x00\x3a\x00\x3b\x00\x3c\x00\x3d"
+                b"\x00\x3e"
             ),
             (
                 "Number of registers (9) in GetRegister request is outside the defined "
@@ -639,12 +639,12 @@ def test_messages_get_register_request_register_value_invalid(
     ("app_bytes", "expected_register_data"),
     [
         pytest.param(
-            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2A\xF0\x24"),
+            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2a\xf0\x24"),
             {
                 RegisterData(
                     id_=RegisterID(128),
                     unit=RegisterUnit(0x16),
-                    value=RegisterValueBytes(b"\x04\x11\x01\x2A\xF0\x24"),
+                    value=RegisterValueBytes(b"\x04\x11\x01\x2a\xf0\x24"),
                 ),
             },
             id="Kamstrup doc 6.2.4 GetRegister response",
@@ -682,7 +682,7 @@ def test_messages_get_register_response(
     [
         pytest.param(
             constants.CommandId.GET_REGISTER.value,
-            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2A\xF0"),
+            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2a\xf0"),
             codec.DataLengthUnexpectedError,
             (
                 "Register value data left in buffer is of length 8, expected length is "
@@ -702,7 +702,7 @@ def test_messages_get_register_response(
         ),
         pytest.param(
             constants.CommandId.GET_REGISTER.value,
-            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2A\xF0\x24\x01"),
+            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2a\xf0\x24\x01"),
             codec.DataLengthUnexpectedError,
             (
                 "Data to decode register data is of length 1, expected length is 6 at "
@@ -741,12 +741,12 @@ def test_messages_get_register_response_decode_error(
     ("app_bytes", "expected_register_data", "expected_log_message"),
     [
         pytest.param(
-            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2A\xF0\x24" * 2),
+            codec.ApplicationDataBytes(b"\x00\x80\x16\x04\x11\x01\x2a\xf0\x24" * 2),
             {
                 RegisterData(
                     id_=RegisterID(128),
                     unit=RegisterUnit(0x16),
-                    value=RegisterValueBytes(b"\x04\x11\x01\x2A\xF0\x24"),
+                    value=RegisterValueBytes(b"\x04\x11\x01\x2a\xf0\x24"),
                 ),
             },
             "Duplicate register ID 128 in response, overwriting value.",

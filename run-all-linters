@@ -27,9 +27,8 @@ echo "Ruff..."
 "$PYTHON" -m ruff check "${PYTHON_SOURCES_DIRS[@]}"
 echo "OK!"
 
-# Black options are specified in pyproject.toml.
-echo "black..."
-"$PYTHON" -m black --check --diff . || (echo "Run 'black .' to fix."; exit 1)
+echo "Ruff format..."
+"$PYTHON" -m ruff format --diff || (echo "Run 'ruff format' to fix."; exit 1)
 echo "OK!"
 
 # Other than '--cache-dir=/dev/null', mypy options are specified in pyproject.toml.

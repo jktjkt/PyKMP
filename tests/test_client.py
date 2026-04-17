@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from . import util
 
 SOME_DESTINATION_ADDRESS = 0x3A
-GET_TYPE_REQUEST_BYTES = codec.PhysicalBytes(b"\x80\x3A\x01\xfa\x7f\x0d")
+GET_TYPE_REQUEST_BYTES = codec.PhysicalBytes(b"\x80\x3a\x01\xfa\x7f\x0d")
 ANOTHER_DESTINATION_ADDRESS = 0x3F
 GET_SERIAL_RESPONSE_BYTES = codec.PhysicalBytes(
-    b"\x40\x3A\x02\x00\x12\xd6\x87\x9e\xe0\x0d"
+    b"\x40\x3a\x02\x00\x12\xd6\x87\x9e\xe0\x0d"
 )
 
 
@@ -81,7 +81,7 @@ def test_client_codec_encode_request_typing() -> None:
 
 
 def test_client_codec_decode_response_typing() -> None:
-    response_encoded = codec.PhysicalBytes(b"\x40\x3F\x02\x01\x23\x45\x67\xE9\x56\x0D")
+    response_encoded = codec.PhysicalBytes(b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d")
     communicator = ClientCodec()
     frame = EncodedClientResponse(
         physical_bytes=response_encoded, request_cls=messages.GetSerialRequest
@@ -105,9 +105,7 @@ def test_client_pyserial_communicator_read_write(
     with unittest.mock.patch("serial.serial_for_url") as mocked_func:
         mocked_func.return_value = fake_serial
         with ensure_no_warnings_logged():
-            communicator = PySerialClientCommunicator(
-                serial_device=serial_device_uri
-            )  # pyright: ignore[reportGeneralTypeIssues]
+            communicator = PySerialClientCommunicator(serial_device=serial_device_uri)  # pyright: ignore[reportGeneralTypeIssues]
         mocked_func.assert_called_once()
 
     some_bytes = b"1234"
@@ -144,9 +142,7 @@ def test_client_pyserial_communicator_nonexistent(
     ensure_no_warnings_logged: util.SimpleContextTest,
 ) -> None:
     with pytest.raises(serial.serialutil.SerialException), ensure_no_warnings_logged():
-        PySerialClientCommunicator(
-            serial_device=serial_device_uri
-        )  # pyright: ignore[reportGeneralTypeIssues]
+        PySerialClientCommunicator(serial_device=serial_device_uri)  # pyright: ignore[reportGeneralTypeIssues]
 
 
 def test_client_pyserial_communicator_send_request(
@@ -154,11 +150,9 @@ def test_client_pyserial_communicator_send_request(
     ensure_no_warnings_logged: util.SimpleContextTest,
 ) -> None:
     mock_serial.stub(  # pyright: ignore[reportUnknownMemberType]
-        receive_bytes=b"\x80\x3F\x02\x35\xE9\x0D",  # GetSerialNo request
-        send_bytes=b"\x40\x3F\x02\x01\x23\x45\x67\xE9\x56\x0D",  # GetSerialNo response
+        receive_bytes=b"\x80\x3f\x02\x35\xe9\x0d",  # GetSerialNo request
+        send_bytes=b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d",  # GetSerialNo response
     )
     with ensure_no_warnings_logged():
-        communicator = PySerialClientCommunicator(
-            serial_device=mock_serial.port
-        )  # pyright: ignore[reportGeneralTypeIssues]
+        communicator = PySerialClientCommunicator(serial_device=mock_serial.port)  # pyright: ignore[reportGeneralTypeIssues]
         communicator.send_request(message=messages.GetSerialRequest())

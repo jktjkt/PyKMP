@@ -45,7 +45,6 @@ tool = [
 
 [dependency-groups]
 dev = [
-    "black>=23.11.0",
     "build",
     "check-wheel-contents>=0.6.0",
     "click",
@@ -180,7 +179,7 @@ select = [
     # "DOC",   # pydoclint
 ]
 ignore = [
-    # Conflicts with Black in style of commas used on a single line.
+    # Conflicts with the formatter in style of commas used on a single line.
     # https://github.com/astral-sh/ruff/issues/6525
     "COM812",
 

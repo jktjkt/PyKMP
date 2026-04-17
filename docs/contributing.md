@@ -86,7 +86,7 @@ specific versions specified rather than relying on whatever is available system-
 
     If you like, enable automatic on-save formatting with project-provided settings
     using the user/profile-level setting `editor.formatOnSave`.
-    It will run `black` for you whenever hitting *Save* on a file.
+    It will run `ruff format` for you whenever hitting *Save* on a file.
 
 ## Add yourself as contributor
 

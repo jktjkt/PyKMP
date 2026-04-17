@@ -184,23 +184,21 @@ class PhysicalCodec:
     direction: PhysicalDirection = attrs.field()
     _start_byte: int = attrs.field(init=False)  # depends on direction
 
-    BYTE_STUFFING_MAP: ClassVar[Mapping[bytes, bytes]] = MappingProxyType(
-        {
-            the_byte.to_bytes(1, "big"): (
-                constants.ByteCode.STUFFING.value.to_bytes(1, "big")
-                + (the_byte ^ 0xFF).to_bytes(1, "big")
-            )
-            for the_byte in (
-                # Order matters for having BYTE_STUFFING as the first; itself is used in
-                # the escaped sequence.
-                constants.ByteCode.STUFFING.value,
-                constants.ByteCode.ACK.value,
-                constants.ByteCode.START_FROM_METER.value,
-                constants.ByteCode.START_TO_METER.value,
-                constants.ByteCode.STOP.value,
-            )
-        }
-    )
+    BYTE_STUFFING_MAP: ClassVar[Mapping[bytes, bytes]] = MappingProxyType({
+        the_byte.to_bytes(1, "big"): (
+            constants.ByteCode.STUFFING.value.to_bytes(1, "big")
+            + (the_byte ^ 0xFF).to_bytes(1, "big")
+        )
+        for the_byte in (
+            # Order matters for having BYTE_STUFFING as the first; itself is used in
+            # the escaped sequence.
+            constants.ByteCode.STUFFING.value,
+            constants.ByteCode.ACK.value,
+            constants.ByteCode.START_FROM_METER.value,
+            constants.ByteCode.START_TO_METER.value,
+            constants.ByteCode.STOP.value,
+        )
+    })
 
     def __attrs_post_init__(self) -> None:
         """Select start byte value according to configuration (direction)."""
@@ -589,7 +587,7 @@ class FloatCodec:
                 valid_range=(None, max_value_six_bits),
                 actual=exponent_,
             )
-        sign_exp_value = ((int(negative) << 7) | (int(exponent < 0) << 6) | exponent_)
+        sign_exp_value = (int(negative) << 7) | (int(exponent < 0) << 6) | exponent_
         return sign_exp_value.to_bytes(1, "big")
 
     @classmethod
