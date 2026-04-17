@@ -23,7 +23,7 @@
 
     "files.exclude": {
         ".coverage": true,
-        ".direnv/": true,
+        ".venv/": true,
         ".pytest_cache/": true,
         ".pytest-cov/": true,
         ".ruff_cache/": true,

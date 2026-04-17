@@ -7,15 +7,37 @@ SPDX-License-Identifier: CC0-1.0
 
 ## Installation
 
-First of all, you'll need Python 3.10+ (sorry, using modern Python features).
+Install [`PyKMP` from :fontawesome-brands-python: PyPI][pypi-pykmp].
+You can use either the traditional `venv`/`pip` flow or [`uv`][uv-home].
 
-Then just install [`PyKMP` from :fontawesome-brands-python: PyPI][pypi-pykmp], e.g.:
+You'll need Python 3.10+ (using modern Python features) which `uv` can take care
+of for you if your system does not have it.
+
+### Option 1: `uv`
+
+```console
+$ uv tool install 'PyKMP[tool]'  #(1)
+$ pykmp-tool --help              #(2)
+```
+
+1. Installs the CLI tool in a `uv`-managed environment.
+
+2. Runs the installed command directly in the `uv`-managed environment.
+
+If you only want to try the tool without installing it persistently, use:
+
+```console
+$ uvx --from 'PyKMP[tool]' pykmp-tool --help
+```
+
+### Option 2: Traditional Python and `pip`
 
 ```console
 $ python -m venv /tmp/venv       #(1)
 $ source /tmp/venv/bin/activate  #(2)
 $ pip install -U pip setuptools  #(3)
 $ {==pip install PyKMP==}[tool]        #(4)
+$ pykmp-tool --help              #(5)
 ```
 
 1. Creates a 'virtual environment' using the Python built-in
@@ -28,13 +50,12 @@ $ {==pip install PyKMP==}[tool]        #(4)
 
 4. Install with the optional dependencies for the CLI tool by adding `[tool]`.
 
+5. `pykmp-tool` should be availble while you've activated the virtual environment.
+
 ## CLI tool `pykmp-tool`
 
 Let's explore some of the features by using the CLI tool first.
 
-```console
-$ source /tmp/pykmp-venv/bin/activate  # activate this venv in every new session
-```
 ??? note "Full output of `pykmp-tool --help`"
     ```
     Usage: pykmp-tool [OPTIONS] COMMAND [ARGS]...
@@ -175,4 +196,5 @@ for reg in response.registers.values():
 ```
 
 [python-docs-venv]: https://docs.python.org/3/library/venv.html
+[uv-home]: https://docs.astral.sh/uv/
 [pypi-pykmp]: https://pypi.org/project/PyKMP/

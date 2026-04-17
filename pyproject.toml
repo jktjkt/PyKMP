@@ -38,8 +38,13 @@ dependencies = [
 serial = [
     "pyserial",
 ]
+tool = [
+    "click",
+    "pyserial",
+]
 
-development = [
+[dependency-groups]
+dev = [
     "black>=23.11.0",
     "build",
     "check-wheel-contents>=0.6.0",
@@ -64,11 +69,6 @@ development = [
     "validate-pyproject[all]",
 ]
 
-tool = [
-    "click",
-    "pyserial",
-]
-
 [project.urls]
 homepage = "https://gertvdijk.github.io/PyKMP/"
 repository = "https://github.com/gertvdijk/PyKMP.git"
@@ -88,6 +88,10 @@ readme = { file = ["README.md"], content-type = "text/markdown" }
 
 [tool.setuptools_scm]
 version_scheme = "guess-next-dev"
+
+[tool.uv]
+package = true
+default-groups = ["dev"]
 
 [tool.ruff]
 src = ["src", "tests"]
