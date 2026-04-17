@@ -568,21 +568,36 @@ class FloatCodec:
         )
         return -ret if negative else ret
 
+    @staticmethod
+    def _decimal_parts(to_encode: decimal.Decimal) -> tuple[bool, tuple[int, ...], int]:
+        """Normalize a decimal and return its sign, digits tuple, and exponent."""
+        decimal_tuple = to_encode.normalize().as_tuple()
+        negative = bool(decimal_tuple.sign)
+        exponent = decimal_tuple.exponent
+        if not isinstance(exponent, int):
+            raise UnsupportedDecimalExponentError(actual_exponent=exponent)
+        return negative, decimal_tuple.digits, exponent
+
+    @staticmethod
+    def _encode_sign_exponent_byte(*, negative: bool, exponent: int) -> bytes:
+        """Pack sign and exponent metadata into the KMP sign/exponent byte."""
+        exponent_ = abs(exponent)
+        max_value_six_bits = 0b00111111
+        if exponent_ > max_value_six_bits:
+            raise OutOfRangeError(
+                what=f"Exponent ({exponent_}) to encode",
+                valid_range=(None, max_value_six_bits),
+                actual=exponent_,
+            )
+        sign_exp_value = ((int(negative) << 7) | (int(exponent < 0) << 6) | exponent_)
+        return sign_exp_value.to_bytes(1, "big")
+
     @classmethod
     def encode(
         cls, *, to_encode: decimal.Decimal, significand_num_bytes: int | None = 4
     ) -> bytes:
         """Encode a decimal.Decimal value to a byte sequence in the KMP protocol."""
-        decimal_tuple = to_encode.normalize().as_tuple()
-        negative, digits, exponent = (
-            bool(decimal_tuple.sign),
-            decimal_tuple.digits,
-            decimal_tuple.exponent,
-        )
-
-        if not isinstance(exponent, int):
-            raise UnsupportedDecimalExponentError(actual_exponent=exponent)
-
+        negative, digits, exponent = cls._decimal_parts(to_encode)
         mantissa = int("".join(str(digit) for digit in digits))
         mantissa_bytes_length_needed = math.ceil(mantissa.bit_length() / 8)
         if significand_num_bytes is not None:
@@ -595,21 +610,9 @@ class FloatCodec:
             mantissa_bytes_length = significand_num_bytes
         else:
             mantissa_bytes_length = mantissa_bytes_length_needed
-        exponent_negative = exponent < 0
-        exponent_: int = abs(exponent)
-        max_value_six_bits = 0b00111111
-        if exponent_ > max_value_six_bits:
-            raise OutOfRangeError(
-                what=f"Exponent ({exponent_}) to encode",
-                valid_range=(None, max_value_six_bits),
-                actual=exponent_,
-            )
         mantissa_lengh_byte = mantissa_bytes_length.to_bytes(1, "big")
-        sign_bit = int(negative) << 7
-        exponent_sign_bit = int(exponent_negative) << 6
-        exponent_bits = exponent_ & 0b00111111
-        sign_exp_byte = (sign_bit | exponent_sign_bit | exponent_bits).to_bytes(
-            1, "big"
+        sign_exp_byte = cls._encode_sign_exponent_byte(
+            negative=negative, exponent=exponent
         )
         mantissa_bytes = mantissa.to_bytes(mantissa_bytes_length, "big")
         return mantissa_lengh_byte + sign_exp_byte + mantissa_bytes
