@@ -19,12 +19,16 @@ import decimal
 import enum
 import logging
 import math
-from typing import Any, Final, Literal, NewType, cast
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, ClassVar, Final, Literal, NewType, cast
 
 import attrs
 import crc
 
 from . import constants
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 logger = logging.getLogger(__name__)
 
@@ -180,21 +184,23 @@ class PhysicalCodec:
     direction: PhysicalDirection = attrs.field()
     _start_byte: int = attrs.field(init=False)  # depends on direction
 
-    BYTE_STUFFING_MAP: Final[dict[bytes, bytes]] = {
-        the_byte.to_bytes(1, "big"): (
-            constants.ByteCode.STUFFING.value.to_bytes(1, "big")
-            + (the_byte ^ 0xFF).to_bytes(1, "big")
-        )
-        for the_byte in (
-            # Order matters for having BYTE_STUFFING as the first; itself is used in the
-            # escaped sequence.
-            constants.ByteCode.STUFFING.value,
-            constants.ByteCode.ACK.value,
-            constants.ByteCode.START_FROM_METER.value,
-            constants.ByteCode.START_TO_METER.value,
-            constants.ByteCode.STOP.value,
-        )
-    }
+    BYTE_STUFFING_MAP: ClassVar[Mapping[bytes, bytes]] = MappingProxyType(
+        {
+            the_byte.to_bytes(1, "big"): (
+                constants.ByteCode.STUFFING.value.to_bytes(1, "big")
+                + (the_byte ^ 0xFF).to_bytes(1, "big")
+            )
+            for the_byte in (
+                # Order matters for having BYTE_STUFFING as the first; itself is used in
+                # the escaped sequence.
+                constants.ByteCode.STUFFING.value,
+                constants.ByteCode.ACK.value,
+                constants.ByteCode.START_FROM_METER.value,
+                constants.ByteCode.START_TO_METER.value,
+                constants.ByteCode.STOP.value,
+            )
+        }
+    )
 
     def __attrs_post_init__(self) -> None:
         """Select start byte value according to configuration (direction)."""
