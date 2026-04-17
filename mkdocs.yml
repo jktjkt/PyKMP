@@ -61,7 +61,7 @@ extra:
     - icon: fontawesome/brands/mastodon
       link: https://mastodon.social/@gertvdijk
       name: Gert van Dijk on Mastodon
-    - icon: fontawesome/solid/square
+    - icon: fontawesome/brands/bluesky
       link: https://bsky.app/profile/i6t.nl
       name: Gert van Dijk on Bluesky
     - icon: fontawesome/brands/github
