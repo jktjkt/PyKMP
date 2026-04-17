@@ -45,7 +45,7 @@ the owners of this repository before making a change.
     ```console
     $ uv run pytest
     [...]
-    ==== 117 passed in 0.21s ====
+    ==== 116 passed in 0.21s ====
     ```
 
 1. Verify that you can run the `run-all-linters` script.
