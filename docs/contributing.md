@@ -27,7 +27,7 @@ the owners of this repository before making a change.
     ```
 
 1. Create a local virtual environment for the project. Pick any supported interpreter
-    version (3.10, 3.11 or 3.12); `3.12` is a sensible default.
+    version (3.10 - 3.14), e.g. for 3.12.x:
 
     ```console
     $ uv python install 3.12
