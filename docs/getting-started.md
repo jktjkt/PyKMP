@@ -168,7 +168,8 @@ To perform the above example with requesting the serial number, but then
 programmatically using the API:
 
 ```{ .python .copy }
-from pykmp import GetSerialRequest, PySerialClientCommunicator
+from pykmp import GetSerialRequest
+from pykmp.client import PySerialClientCommunicator
 
 multical = PySerialClientCommunicator(serial_device="/dev/ttyUSB0")
 response = multical.send_request(message=GetSerialRequest())
@@ -183,8 +184,8 @@ from pykmp import (
     UNITS_NAMES,
     FloatCodec,
     GetRegisterRequest,
-    PySerialClientCommunicator,
 )
+from pykmp.client import PySerialClientCommunicator
 
 multical = PySerialClientCommunicator(serial_device="/dev/ttyUSB0")
 response = multical.send_request(

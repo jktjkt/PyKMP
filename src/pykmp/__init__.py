@@ -19,11 +19,12 @@ from .messages import (
     RegisterID,
 )
 
-if PYSERIAL_AVAILABLE:
-    from .client import PySerialClientCommunicator
-
-
+# `PySerialClientCommunicator` is intentionally not re-exported from the package root.
+# Doing so would make the optional `pyserial` dependency an unconditional import-time
+# requirement for `import pykmp`. Import `PySerialClientCommunicator` like this:
+# `from pykmp.client import PySerialClientCommunicator`.
 __all__ = [
+    "PYSERIAL_AVAILABLE",
     "REGISTERS",
     "UNITS_NAMES",
     "ClientCommunicator",
@@ -34,7 +35,6 @@ __all__ = [
     "GetSerialResponse",
     "GetTypeRequest",
     "GetTypeResponse",
-    "PySerialClientCommunicator",
     "RegisterData",
     "RegisterID",
 ]
