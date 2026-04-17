@@ -24,6 +24,8 @@ if PYSERIAL_AVAILABLE:
 
 
 __all__ = [
+    "REGISTERS",
+    "UNITS_NAMES",
     "ClientCommunicator",
     "FloatCodec",
     "GetRegisterRequest",
@@ -35,6 +37,4 @@ __all__ = [
     "PySerialClientCommunicator",
     "RegisterData",
     "RegisterID",
-    "REGISTERS",
-    "UNITS_NAMES",
 ]

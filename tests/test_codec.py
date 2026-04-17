@@ -531,19 +531,19 @@ def test_codec_application_encode_error(
         pytest.param(
             b"\x04\x03\x05\x39\x7F\xB1",
             87_654_321_000,
-            decimal.Decimal("87654321000"),
+            decimal.Decimal(87654321000),
             id="Kamstrup doc 4.2 example 2 [si=0, se=0, exp=3]",
         ),
         pytest.param(
             b"\x01\x03\xFF",
             255_000,
-            decimal.Decimal("255000"),
+            decimal.Decimal(255000),
             id="Kamstrup doc 4.2 example 3 [si=0, se=0, exp=3]",
         ),
         pytest.param(
             b"\x04\x11\x01\x2A\xF0\x24",
             19591204 * (10**17),
-            decimal.Decimal("1959120400000000000000000"),
+            decimal.Decimal(1959120400000000000000000),
             id="Kamstrup doc 6.2.4 GetRegister response [si=0, se=0, exp=17]",
         ),
         pytest.param(
@@ -666,7 +666,7 @@ def test_codec_float_decode_error(
     ("to_encode", "significand_num_bytes", "exc_type", "exc_message"),
     [
         pytest.param(
-            decimal.Decimal("12345678901234567890"),
+            decimal.Decimal(12345678901234567890),
             4,
             OutOfRangeError,
             (

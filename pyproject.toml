@@ -60,7 +60,7 @@ dev = [
     "pytest-cov",
     "pytest",
     "reuse",
-    "ruff>=0.1.7",
+    "ruff>=0.15.11",
     "setuptools-scm[toml]>=6.2",
     "twine",
     "types-pyserial",
@@ -97,6 +97,8 @@ default-groups = ["dev"]
 src = ["src", "tests"]
 # It's OK to be in preview; this is a project in alpha anyway.
 preview = true
+
+[tool.ruff.lint]
 select = [
     # List based on all linter rules (prefixes) in version 0.0.290 (`ruff linter`).
     # Explicit selection is encouraged as per Ruff documentation, opposed to implicit
@@ -113,7 +115,6 @@ select = [
     "YTT",   # flake8-2020
     "ANN",   # flake8-annotations
     "ASYNC", # flake8-async
-    "TRIO",  # flake8-trio
     "S",     # flake8-bandit
     "BLE",   # flake8-blind-except
     "FBT",   # flake8-boolean-trap
@@ -142,7 +143,7 @@ select = [
     "SLOT",  # flake8-slots
     "SIM",   # flake8-simplify
     "TID",   # flake8-tidy-imports
-    "TCH",   # flake8-type-checking
+    "TC",    # flake8-type-checking
     "INT",   # flake8-gettext
     "ARG",   # flake8-unused-arguments
     "PTH",   # flake8-use-pathlib
@@ -171,14 +172,14 @@ select = [
     # E.g. "Use `.to_numpy()` instead of `.values`"
     # https://github.com/astral-sh/ruff/issues/6630
     # "PD",    # pandas-vet
+
+    # FastAPI is not used in this project.
+    # "FAST",  # FastAPI
+
+    # Perhaps for later to improve docstrings.
+    # "DOC",   # pydoclint
 ]
 ignore = [
-    # "Missing type annotation for `self` in method"
-    # "Missing type annotation for `cls` in classmethod"
-    # ... do not make any sense to me. 🤨
-    "ANN101",
-    "ANN102",
-
     # Conflicts with Black in style of commas used on a single line.
     # https://github.com/astral-sh/ruff/issues/6525
     "COM812",
@@ -197,10 +198,6 @@ ignore = [
     "D203",
     "D212",
 
-    # Style conflicts with Black.
-    # https://github.com/astral-sh/ruff/issues/7259
-    "E203",
-
     # "Line contains TODO"
     "FIX002",
 
@@ -211,9 +208,12 @@ ignore = [
     "TD002",
     # "Missing issue link on the line following this TODO"
     "TD003",
+
+    # Keep direct type references in cast() for readability and rename safety.
+    "TC006",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "src/pykmp/tool/**" = [
     # Docstrings only enforced for the library itself, not the tool.
     "D100",
@@ -245,7 +245,7 @@ ignore = [
     "D301",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 required-imports = [
     # PEP-563 (new semantics for annotations) is gated behind
     # 'from __future__ import annotations', including Python 3.10 & 3.11.
