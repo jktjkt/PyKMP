@@ -516,9 +516,9 @@ class FloatCodec:
     @classmethod
     def decode(cls, data: bytes) -> decimal.Decimal:
         """Decode a byte sequence of a floating point format to a decimal.Decimal."""
-        negative, exponent_negative, _exponent, mantissa = cls._decode_parts(data)
+        negative, exponent_negative, exponent_, mantissa = cls._decode_parts(data)
         mantissa_digits = tuple(int(digit) for digit in str(mantissa))
-        exponent = -_exponent if exponent_negative else _exponent
+        exponent = -exponent_ if exponent_negative else exponent_
         # Leverage the convenient three-item tuple constructor here.
         ret = decimal.Decimal((negative, mantissa_digits, exponent))
         logger.debug(
@@ -528,7 +528,7 @@ class FloatCodec:
             mantissa,
             negative,
             exponent_negative,
-            _exponent,
+            exponent_,
         )
         return ret
 
@@ -549,14 +549,14 @@ class FloatCodec:
         Its use is discouraged and if one needs a float then convert the returned
         decimal.Decimal from the regular `decode()` method.
         """
-        negative, exponent_negative, _exponent, mantissa = cls._decode_parts(data)
+        negative, exponent_negative, exponent, mantissa = cls._decode_parts(data)
         ret: int | float
         if not exponent_negative:
             # Final value remains integer; avoids unnecessary float imprecision for
             # cases without shifting the decimal point left.
-            ret = mantissa * int(math.pow(10, _exponent))
+            ret = mantissa * int(math.pow(10, exponent))
         else:
-            ret = mantissa * math.pow(10, -_exponent)
+            ret = mantissa * math.pow(10, -exponent)
         logger.debug(
             "Decoded floating point data: %f [data=%r, man=%d, si=%s, se=%s, exp=%d]",
             ret,
@@ -564,7 +564,7 @@ class FloatCodec:
             mantissa,
             negative,
             exponent_negative,
-            _exponent,
+            exponent,
         )
         return -ret if negative else ret
 
@@ -596,18 +596,18 @@ class FloatCodec:
         else:
             mantissa_bytes_length = mantissa_bytes_length_needed
         exponent_negative = exponent < 0
-        _exponent: int = abs(exponent)
+        exponent_: int = abs(exponent)
         max_value_six_bits = 0b00111111
-        if _exponent > max_value_six_bits:
+        if exponent_ > max_value_six_bits:
             raise OutOfRangeError(
-                what=f"Exponent ({_exponent}) to encode",
+                what=f"Exponent ({exponent_}) to encode",
                 valid_range=(None, max_value_six_bits),
-                actual=_exponent,
+                actual=exponent_,
             )
         mantissa_lengh_byte = mantissa_bytes_length.to_bytes(1, "big")
         sign_bit = int(negative) << 7
         exponent_sign_bit = int(exponent_negative) << 6
-        exponent_bits = _exponent & 0b00111111
+        exponent_bits = exponent_ & 0b00111111
         sign_exp_byte = (sign_bit | exponent_sign_bit | exponent_bits).to_bytes(
             1, "big"
         )
