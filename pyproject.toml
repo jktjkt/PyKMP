@@ -16,12 +16,12 @@ authors = [
 ]
 description = """Library for the KMP protocol used with Kamstrup electricity/energy \
     meters (e.g. MULTICAL® 30x/40x/60x)."""
-license = { text = "Apache License 2.0" }
+license = "Apache-2.0"
+license-files = ["LICENSES/*.txt"]
 dynamic = ["version", "readme"]
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -76,7 +76,6 @@ repository = "https://github.com/gertvdijk/PyKMP.git"
 pykmp-tool = "pykmp.tool.__main__:main"
 
 [tool.setuptools]
-license-files = ["LICENSES/*.txt"]
 include-package-data = false
 
 [tool.setuptools.packages.find]
