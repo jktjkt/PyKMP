@@ -9,6 +9,7 @@ repo_name: gertvdijk/PyKMP
 
 nav:
   - Home: index.md
+  - changelog.md
   - getting-started.md
   - hardware-requirements.md
   - battery-consumption.md

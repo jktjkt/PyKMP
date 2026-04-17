@@ -22,6 +22,8 @@ Current state: *alpha* – based on the documentation it "should work" with a MU
 30x/40x/60x, but for other models: YMMV.
 *Pull requests welcome!*
 
+See also the [changelog](changelog.md).
+
 !!! note
 
     This project is not affiliated with Kamstrup A/S, Kamstrup B.V. or any other entity of
