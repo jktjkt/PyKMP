@@ -50,7 +50,7 @@ $ pykmp-tool --help              #(5)
 
 4. Install with the optional dependencies for the CLI tool by adding `[tool]`.
 
-5. `pykmp-tool` should be availble while you've activated the virtual environment.
+5. `pykmp-tool` should be available while you've activated the virtual environment.
 
 ## CLI tool `pykmp-tool`
 
@@ -114,8 +114,8 @@ GetRegister response(s):
  266 → E1HighRes        = 84208 Wh
 ```
 
-1. Totally optional, but here we use an environment variable for convenience instead of
-   `--serial-device /dev/ttyUSB0` in the command.
+1. This is optional, but using an environment variable is convenient compared to passing
+   `--serial-device /dev/ttyUSB0` on every command.
     You just have to set (export) it once for the session.
 
     :bulb: See `pykmp-tool --help` for how any other command line option can be set with

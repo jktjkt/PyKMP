@@ -87,8 +87,8 @@ Please set `ruff.importStrategy` to `fromEnvironment` in your workspace (or user
 settings to use the same Ruff version as in the virtual environment.
 The Ruff plugin uses the bundled version by default.
 
-All linters and type checkers will run inside this environment created with
-specific versions specified rather than relying on whatever is available system-wide.
+All linters and type checkers will run inside this environment, using the project's
+pinned tool versions instead of whatever is available system-wide.
 
 !!! tip "Automatic on-save formatting"
 
@@ -145,7 +145,7 @@ copyright, for example automated reformatting or changing the name of a variable
     (compare coverage output).
 1. All ready?!
     Create a pull request targeting the `develop` branch.
-    Write a title that consicely describes the main aim of the changes in the request.
+    Write a title that concisely describes the main aim of the changes in the request.
     Consider to tick the *"Allow edits by maintainers"* checkbox (see below).
 1. Please allow the maintainer to take the time to review and test the code.
     In case code changes are requested, please amend the commit(s) affected and update

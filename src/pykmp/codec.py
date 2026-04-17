@@ -276,7 +276,7 @@ class PhysicalCodec:
         """
         Encode an ACK message.
 
-        This type of message does not need andy stuffing or start/stop bytes.
+        This type of message does not need any stuffing or start/stop bytes.
         """
         return cast(PhysicalBytes, constants.ACK_BYTES)
 
@@ -394,7 +394,7 @@ class ApplicationCodec:
     sequences. What it does is destructuring the byte sequence into a Command ID (CID)
     and the command data.
 
-    Note that this covers both requests and responses and command data may be emtpy.
+    Note that this covers both requests and responses and command data may be empty.
 
     See section 3.3 of the KMP protocol description document.
     """
@@ -608,9 +608,9 @@ class FloatCodec:
             mantissa_bytes_length = significand_num_bytes
         else:
             mantissa_bytes_length = mantissa_bytes_length_needed
-        mantissa_lengh_byte = mantissa_bytes_length.to_bytes(1, "big")
+        mantissa_length_byte = mantissa_bytes_length.to_bytes(1, "big")
         sign_exp_byte = cls._encode_sign_exponent_byte(
             negative=negative, exponent=exponent
         )
         mantissa_bytes = mantissa.to_bytes(mantissa_bytes_length, "big")
-        return mantissa_lengh_byte + sign_exp_byte + mantissa_bytes
+        return mantissa_length_byte + sign_exp_byte + mantissa_bytes
