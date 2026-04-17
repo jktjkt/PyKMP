@@ -5,9 +5,9 @@ SPDX-FileCopyrightText: 2026 Gert van Dijk <github@gertvandijk.nl>
 SPDX-License-Identifier: CC0-1.0
 -->
 
-## 0.0.2: 'Reboot' **(in development)**
+## 0.0.2: 'Reboot' (2026-04-16)
 
-No new features are planned for `0.0.2`; the main focus is tooling, packaging,
+No new features are included in `0.0.2`; the main focus is tooling, packaging,
 documentation, and maintainability.
 The Python landscape has changed significantly since the initial release of this project
 in 2023.
