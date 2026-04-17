@@ -33,7 +33,7 @@ $ {==pip install PyKMP==}[tool]        #(4)
 Let's explore some of the features by using the CLI tool first.
 
 ```console
-$ source venv/bin/activate  # activate this venv in every new session
+$ source /tmp/pykmp-venv/bin/activate  # activate this venv in every new session
 ```
 ??? note "Full output of `pykmp-tool --help`"
     ```
