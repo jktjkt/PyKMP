@@ -25,6 +25,7 @@ nav:
       - Codec: api/codec.md
       - Constants: api/constants.md
     - contributing.md
+    - releasing.md
     - resources.md
 
 theme:

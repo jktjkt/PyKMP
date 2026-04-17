@@ -45,7 +45,6 @@ tool = [
 
 [dependency-groups]
 dev = [
-    "build",
     "check-wheel-contents>=0.6.0",
     "click",
     "crc>=5.0.0",  # typed since 5.0.0
@@ -61,7 +60,6 @@ dev = [
     "reuse",
     "ruff>=0.15.11",
     "setuptools-scm[toml]>=6.2",
-    "twine",
     "types-pyserial",
     # Backport Python 3.11 typing features to 3.10: 'assert_type', 'Self'.
     "typing_extensions; python_version < '3.11'",
@@ -90,6 +88,12 @@ version_scheme = "guess-next-dev"
 [tool.uv]
 package = true
 default-groups = ["dev"]
+
+[[tool.uv.index]]
+name = "testpypi"
+url = "https://test.pypi.org/simple/"
+publish-url = "https://test.pypi.org/legacy/"
+explicit = true
 
 [tool.ruff]
 src = ["src", "tests"]
