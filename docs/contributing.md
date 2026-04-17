@@ -56,6 +56,14 @@ the owners of this repository before making a change.
     Everything looks OK! 🎉
     ```
 
+1. Verify that you can build the documentation.
+
+    ```console
+    $ uv run mkdocs build
+    [...]
+    INFO    -  Documentation built in 0.65 seconds
+    ```
+
 1. You're ready to contribute your changes now!
 
 ### Suggested IDE: VS Code
