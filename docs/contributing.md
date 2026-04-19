@@ -59,7 +59,7 @@ the owners of this repository before making a change.
 1. Verify that you can build the documentation.
 
     ```console
-    $ uv run mkdocs build
+    $ uv run zensical build
     [...]
     INFO    -  Documentation built in 0.65 seconds
     ```

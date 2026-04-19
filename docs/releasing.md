@@ -25,7 +25,7 @@ instead of the final release version.
     ```console
     $ uv run ./run-all-linters
     $ uv run pytest
-    $ uv run mkdocs build
+    $ uv run zensical build
     ```
 
 1. Create the release tag on the release commit:
@@ -85,4 +85,25 @@ instead of the final release version.
     ```console
     $ git push origin HEAD
     $ git push origin 0.0.2
+    ```
+
+## Publish documentation
+
+1. Build the documentation:
+
+    ```console
+    $ uv run zensical build --clean
+    ```
+
+1. Publish using `ghp-import`:
+
+    ```console
+    $ COMMIT_ID="$(git describe --dirty)"
+    $ ZENSICAL_VERSION="$(uv run zensical --version)"
+    $ uv run ghp-import \
+        --no-jekyll \
+        --message="Deployed ${COMMIT_ID} with Zensical version ${ZENSICAL_VERSION}" \
+        --remote=origin \
+        --push \
+        site/
     ```
