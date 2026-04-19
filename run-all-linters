@@ -38,7 +38,7 @@ echo "OK!"
 # disable cache explicitly for this script.
 echo "mypy (PyKMP package)..."
 "$PYTHON" -m mypy --cache-dir=/dev/null --package pykmp
-# echo "mypy (PyKMP tests folder)..."
+echo "mypy (PyKMP tests folder)..."
 "$PYTHON" -m mypy --cache-dir=/dev/null ./tests
 echo "OK!"
 
