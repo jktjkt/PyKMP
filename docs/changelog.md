@@ -5,6 +5,29 @@ SPDX-FileCopyrightText: 2026 Gert van Dijk <github@gertvandijk.nl>
 SPDX-License-Identifier: CC0-1.0
 -->
 
+## 0.0.3 **(unreleased)**
+
+_In development._
+
+### Tooling changes
+
+- Project documentation has been migrated from [MkDocs](https://www.mkdocs.org/) with
+  [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/) to
+  [Zensical](https://zensical.org/).
+  The repository now uses `zensical.toml` for site configuration.
+
+### Development changes
+
+- Pyright has been adopted as an additional strict type checker in `run-all-linters`,
+  with configuration aligned more closely with the VS Code IDE experience.
+- Binary-heavy tests and related constants have been reformatted to use
+  `bytes.fromhex()`, improving the readability of byte-oriented inputs and outputs.
+- Minor follow-up changes further modernized the developer tooling after `0.0.2`.
+  These under-the-hood updates included refreshing the VS Code workspace for the
+  `uv`-managed environment, refining Pyright-specific suppressions, correcting a small
+  type annotation issue in `test_codec_application_encode`, cleaning up
+  `codec.OutOfRangeError`, and a minor polish update to the lint runner output.
+
 ## 0.0.2: 'Reboot' (2026-04-16)
 
 No new features are included in `0.0.2`; the main focus is tooling, packaging,
