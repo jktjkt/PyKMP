@@ -474,7 +474,7 @@ def test_codec_application_decode_error(
                 command_id=0x01,
                 data=ApplicationDataBytes(b""),
             ),
-            ApplicationDataBytes(b"\x01"),
+            ApplicationBytes(b"\x01"),
             id="Kamstrup doc 6.2.1 GetType request CID=1, no data",
         ),
         pytest.param(
@@ -482,7 +482,7 @@ def test_codec_application_decode_error(
                 command_id=0x10,
                 data=ApplicationDataBytes(b"\x01\x00\x80"),
             ),
-            ApplicationDataBytes(b"\x10\x01\x00\x80"),
+            ApplicationBytes(b"\x10\x01\x00\x80"),
             id="Kamstrup doc 6.2.4 GetRegister request CID=10, with data",
         ),
     ],
