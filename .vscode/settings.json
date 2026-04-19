@@ -9,11 +9,6 @@
     // Suggested as user-level or workspace-level setting.
     // "editor.formatOnSave": true,
 
-    // Please set 'pytest.command' in your workspace (or user) settings to load
-    // Pytest from the environment.
-    // Not a valid folder-level setting.
-    "pytest.command": "python -m pytest",
-
     "files.exclude": {
         ".coverage": true,
         ".venv/": true,
@@ -27,6 +22,11 @@
         "site/": true,
     },
     "files.insertFinalNewline": true,
+
+    // Rely on uv to provide us with a proper venv in .venv/.
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python-envs.workspaceSearchPaths": ["./.venv"],
+
     "python.analysis.diagnosticMode": "workspace",
     "python.analysis.indexing": true,
     "[python]": {
