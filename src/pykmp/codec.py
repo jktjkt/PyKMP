@@ -75,11 +75,6 @@ class OutOfRangeError(BaseCodecError):
                 return f"{self.what} is over maximum of {upper}: {self.actual}."
             case (int(lower), None):
                 return f"{self.what} is under minimum of {lower}: {self.actual}."
-            # Instead of a 'type: ignore[return]', help mypy with an unreachable default
-            # case. Looks like https://github.com/python/mypy/issues/12364.
-            # Pyright is right here, so suppress that one.
-            case _:  # pyright: ignore[reportUnnecessaryComparison]  # pragma: nocover
-                raise TypeError  # pragma: nocover
 
 
 @attrs.define(kw_only=True)
