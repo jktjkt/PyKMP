@@ -105,7 +105,7 @@ def test_client_pyserial_communicator_read_write(
     with unittest.mock.patch("serial.serial_for_url") as mocked_func:
         mocked_func.return_value = fake_serial
         with ensure_no_warnings_logged():
-            communicator = PySerialClientCommunicator(serial_device=serial_device_uri)  # pyright: ignore[reportGeneralTypeIssues]
+            communicator = PySerialClientCommunicator(serial_device=serial_device_uri)
         mocked_func.assert_called_once()
 
     some_bytes = b"1234"
@@ -142,7 +142,7 @@ def test_client_pyserial_communicator_nonexistent(
     ensure_no_warnings_logged: util.SimpleContextTest,
 ) -> None:
     with pytest.raises(serial.serialutil.SerialException), ensure_no_warnings_logged():
-        PySerialClientCommunicator(serial_device=serial_device_uri)  # pyright: ignore[reportGeneralTypeIssues]
+        PySerialClientCommunicator(serial_device=serial_device_uri)
 
 
 def test_client_pyserial_communicator_send_request(
@@ -154,5 +154,5 @@ def test_client_pyserial_communicator_send_request(
         send_bytes=b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d",  # GetSerialNo response
     )
     with ensure_no_warnings_logged():
-        communicator = PySerialClientCommunicator(serial_device=mock_serial.port)  # pyright: ignore[reportGeneralTypeIssues]
+        communicator = PySerialClientCommunicator(serial_device=mock_serial.port)
         communicator.send_request(message=messages.GetSerialRequest())
