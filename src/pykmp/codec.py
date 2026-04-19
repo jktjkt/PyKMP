@@ -221,7 +221,7 @@ class PhysicalCodec:
             )
 
         if frame == constants.ACK_BYTES:
-            # The ACK is an APL level acknowledge, but send as a single byte without
+            # The ACK is an APL level acknowledge, but sent as a single byte without
             # start, CRC or stop bytes. See also example Kamstrup doc 6.2.3 (SetClock).
             raise AckReceivedException
 
