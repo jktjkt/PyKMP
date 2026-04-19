@@ -29,7 +29,6 @@
     "files.insertFinalNewline": true,
     "python.analysis.diagnosticMode": "workspace",
     "python.analysis.indexing": true,
-    "python.analysis.typeCheckingMode": "strict",
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",
         "editor.codeActionsOnSave": {

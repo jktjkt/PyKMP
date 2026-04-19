@@ -42,6 +42,10 @@ echo "mypy (PyKMP tests folder)..."
 "$PYTHON" -m mypy --cache-dir=/dev/null ./tests
 echo "OK!"
 
+echo "Pyright..."
+"$PYTHON" -m pyright
+echo "OK!"
+
 echo "REUSE lint..."
 "$PYTHON" -m reuse lint -q 2>/dev/null \
     || (echo "Run 'reuse lint' to view licensing issues."; exit 1)
