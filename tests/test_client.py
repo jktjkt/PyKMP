@@ -26,11 +26,6 @@ if TYPE_CHECKING:
     from . import util
 
 SOME_DESTINATION_ADDRESS = 0x3A
-GET_TYPE_REQUEST_BYTES = codec.PhysicalBytes(b"\x80\x3a\x01\xfa\x7f\x0d")
-ANOTHER_DESTINATION_ADDRESS = 0x3F
-GET_SERIAL_RESPONSE_BYTES = codec.PhysicalBytes(
-    b"\x40\x3a\x02\x00\x12\xd6\x87\x9e\xe0\x0d"
-)
 
 
 def test_client_codec_encode(
@@ -41,20 +36,24 @@ def test_client_codec_encode(
             destination_address=SOME_DESTINATION_ADDRESS,
         )
         encoded = communicator.encode(messages.GetTypeRequest()).physical_bytes
+    get_type_request_length = 6
+    assert len(encoded) == get_type_request_length
     assert encoded[0] == constants.ByteCode.START_TO_METER.value
     assert encoded[1] == SOME_DESTINATION_ADDRESS
-    assert len(encoded) == len(GET_TYPE_REQUEST_BYTES)
 
 
 def test_client_codec_decode(
     ensure_no_warnings_logged: util.SimpleContextTest,
 ) -> None:
     with ensure_no_warnings_logged():
-        communicator = ClientCodec(destination_address=SOME_DESTINATION_ADDRESS)
+        communicator = ClientCodec(destination_address=0x3A)
         decoded = communicator.decode(
             frame=EncodedClientResponse(
                 request_cls=messages.GetSerialRequest,
-                physical_bytes=GET_SERIAL_RESPONSE_BYTES,
+                physical_bytes=codec.PhysicalBytes(
+                    # GetSerialNo response for destination address 3A
+                    bytes.fromhex("40 3A 02 0012D687 9EE0 0D")
+                ),
             ),
         )
     assert isinstance(decoded, messages.GetSerialRequest.get_response_type())
@@ -81,7 +80,9 @@ def test_client_codec_encode_request_typing() -> None:
 
 
 def test_client_codec_decode_response_typing() -> None:
-    response_encoded = codec.PhysicalBytes(b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d")
+    response_encoded = codec.PhysicalBytes(
+        bytes.fromhex("40 3F 02 01234567 E956 0D")  # GetSerialNo response
+    )
     communicator = ClientCodec()
     frame = EncodedClientResponse(
         physical_bytes=response_encoded, request_cls=messages.GetSerialRequest
@@ -150,8 +151,8 @@ def test_client_pyserial_communicator_send_request(
     ensure_no_warnings_logged: util.SimpleContextTest,
 ) -> None:
     mock_serial.stub(  # pyright: ignore[reportUnknownMemberType]
-        receive_bytes=b"\x80\x3f\x02\x35\xe9\x0d",  # GetSerialNo request
-        send_bytes=b"\x40\x3f\x02\x01\x23\x45\x67\xe9\x56\x0d",  # GetSerialNo response
+        receive_bytes=bytes.fromhex("80 3F 02 35E9 0D"),  # GetSerialNo request
+        send_bytes=bytes.fromhex("40 3F 02 01234567 E956 0D"),  # GetSerialNo response
     )
     with ensure_no_warnings_logged():
         communicator = PySerialClientCommunicator(serial_device=mock_serial.port)

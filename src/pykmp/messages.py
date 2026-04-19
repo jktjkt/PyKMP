@@ -210,7 +210,7 @@ class GetTypeResponse(
         rf"^(?P<letter>[A-Z])(?P<number>{ZERO_TO_255_RE.pattern})$",
         re.VERBOSE,
     )
-    SOFTWARE_REVISION_UNAVAILABLE_BYTES: ClassVar[bytes] = b"\x00\x00"
+    SOFTWARE_REVISION_UNAVAILABLE_BYTES: ClassVar[bytes] = bytes.fromhex("0000")
 
     @classmethod
     def decode(cls, data: codec.ApplicationData) -> Self:
