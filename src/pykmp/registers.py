@@ -59,6 +59,12 @@ class RegisterOutput:
                 # mm-dd
                 d = int.from_bytes(reg.value[2:], 'big')
                 value_str = f'{(d // 100 % 100):02}-{(d % 100):02}'
+            case 0x4f:
+                # DST yy:mm:dd hh:mm:ss
+                dst = reg.value[2]
+                value_str = f'{(2000 + reg.value[3]):02}-{reg.value[4]:02}-{reg.value[5]:02} ' \
+                    + f'{reg.value[6]:02}:{reg.value[7]:02}:{reg.value[8]:02}' \
+                    + f'{"+" if dst > 0 else "-"}{(dst // 60):02}:{(dst % 60):02}'
             case _:
                 value_dec = codec.FloatCodec.decode(reg.value)
         return cls(

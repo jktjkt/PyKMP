@@ -52,6 +52,25 @@ from pykmp import messages, registers
             None,
             'mm:dd',
         ),
+        pytest.param(
+            348,
+            79,
+            '07 00 00 18 0c 1f 00 00 04',
+            '2024-12-31 00:00:04-00:00',
+            None,
+            'DST YY-MM-DD hh:mm:ss',
+        ),
+        # FIXME: how to print the DST? This (unadjusted time, and a DST remark at the end) is what the vendor's
+        # documentation is using, but the LogView SW actually shows '07 00 3c 1a 04 15 0c 07 1e' as
+        # '2026-04-21 13:07:30', i.e., with the DST offset of one hour already added.
+        pytest.param(
+            348,
+            79,
+            '07 00 3C 10 06 1E 0E 30 37',
+            '2016-06-30 14:48:55+01:00',
+            None,
+            'DST YY-MM-DD hh:mm:ss',
+        ),
     ]
 )
 def test_register_parsing(id_, unit, blob_with_size, value_str, value_dec, unit_str):
