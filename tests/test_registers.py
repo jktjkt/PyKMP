@@ -71,6 +71,14 @@ from pykmp import messages, registers
             None,
             'DST YY-MM-DD hh:mm:ss',
         ),
+        pytest.param(
+            254,
+            54,
+            '0C 00 30 32 4B 35 32 41 43 31 41 37 43 5A',
+            '02K52AC1A7CZ',
+            None,
+            'ASCII',
+        ),
     ]
 )
 def test_register_parsing(id_, unit, blob_with_size, value_str, value_dec, unit_str):

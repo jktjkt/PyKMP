@@ -65,6 +65,9 @@ class RegisterOutput:
                 value_str = f'{(2000 + reg.value[3]):02}-{reg.value[4]:02}-{reg.value[5]:02} ' \
                     + f'{reg.value[6]:02}:{reg.value[7]:02}:{reg.value[8]:02}' \
                     + f'{"+" if dst > 0 else "-"}{(dst // 60):02}:{(dst % 60):02}'
+            case 0x36:
+                # ASCII
+                value_str = bytes(reg.value[2:]).decode('ascii')
             case _:
                 value_dec = codec.FloatCodec.decode(reg.value)
         return cls(
