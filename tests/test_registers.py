@@ -28,6 +28,30 @@ from pykmp import messages, registers
             decimal.Decimal('378.022'),
             'GJ',
         ),
+        pytest.param(
+            1002,
+            47,
+            '04 00 00 00 00 04',
+            '00:00:04',
+            None,
+            'hh:mm:ss',
+        ),
+        pytest.param(
+            1003,
+            48,
+            '04 00 00 03 ae 4f',
+            '2024-12-31',
+            None,
+            'yy:mm:dd',
+        ),
+        pytest.param(
+            0,
+            50,
+            '04 00 00 03 38',
+            '08-24',
+            None,
+            'mm:dd',
+        ),
     ]
 )
 def test_register_parsing(id_, unit, blob_with_size, value_str, value_dec, unit_str):

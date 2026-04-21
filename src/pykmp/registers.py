@@ -25,9 +25,9 @@ class RegisterOutput:
     unit_int: int
     unit_hex: str = attrs.field(init=False)
     unit_str: str = attrs.field(init=False)
-    value_float: float = attrs.field(init=False)
-    value_str: str = attrs.field(init=False)  # best: uses decimal.Decimal without loss
-    value_dec: decimal.Decimal
+    value_float: float = attrs.field(init=False, default=None)
+    value_str: str = attrs.field()  # best: uses decimal.Decimal without loss
+    value_dec: decimal.Decimal = attrs.field()
 
     def __attrs_post_init__(self) -> None:
         self.id_hex = f"0x{self.id_int:04X}"
@@ -36,16 +36,36 @@ class RegisterOutput:
         self.unit_str = constants.UNITS_NAMES.get(
             self.unit_int, f"<unknown unit {self.unit_int}>"
         )
-        self.value_float = float(self.value_dec)
-        self.value_str = str(self.value_dec)
+        if self.value_dec is not None:
+            self.value_float = float(self.value_dec)
+            self.value_str = str(self.value_dec)
 
     @classmethod
     def from_register_data(cls, reg: messages.RegisterData) -> Self:
-        value_dec = codec.FloatCodec.decode(reg.value)
+        value_dec = None
+        value_str = None
+        match reg.unit:
+            case 0x2f:
+                # hh:mm:ss
+                d = int.from_bytes(reg.value[2:], 'big')
+                value_str = f'{(d//10000):02}:{(d // 100 % 100):02}:{(d % 100):02}'
+                pass
+            case 0x30:
+                # yy-mm-dd
+                d = int.from_bytes(reg.value[2:], 'big')
+                value_str = f'{(2000 + d//10000):02}-{(d // 100 % 100):02}-{(d % 100):02}'
+                pass
+            case 0x32:
+                # mm-dd
+                d = int.from_bytes(reg.value[2:], 'big')
+                value_str = f'{(d // 100 % 100):02}-{(d % 100):02}'
+            case _:
+                value_dec = codec.FloatCodec.decode(reg.value)
         return cls(
             id_int=reg.id_,
             unit_int=reg.unit,
             value_dec=value_dec,
+            value_str=value_str,
         )
 
     def to_pretty_line(self) -> str:
