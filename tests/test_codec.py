@@ -152,7 +152,7 @@ def test_codec_physical_decode_ack(
         ),
         pytest.param(
             PhysicalDirection.FROM_METER,
-            b"",
+            "",
             DataLengthUnexpectedError,
             "Frame is of zero length.",
             id="empty",
