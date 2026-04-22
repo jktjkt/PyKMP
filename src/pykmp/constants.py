@@ -112,9 +112,25 @@ REGISTERS: Final[Mapping[int, str]] = {
     266: "E1HighRes",
     267: "Cooling energy E3 hires",
     279: "DIN meter ID",
+    292: "Water temperature",
+    # FIXME(jkt): Uncertain order (293-295), check them in May 2026 when a first "valid" log entry is made
+    293: "Min water temperature monthly",
+    294: "Max water temperature monthly",
+    295: "Avg water temperature monthly",
+    296: "Min water temperature daily",
+    297: "Max water temperature daily",
+    298: "Avg water temperature daily",
+    299: "Meter temperature",
+    300: "Min meter temperature monthly",
+    301: "Max meter temperature monthly",
+    302: "Avg meter temperature monthly",
+    303: "Min meter temperature daily",
+    304: "Max meter temperature daily",
+    305: "Avg meter temperature daily",
     # Documentation for 327-330 doesn't match what a KWM2231 water meter is sending
     327: "Target date 1",
     328: "Target date 2",
+    338: "Data quality",
     346: "Module SW rev",
     347: "Customer number",
     348: "Date and Time",  # TODO: unknown unit 79, 28591984415535
@@ -145,6 +161,17 @@ REGISTERS: Final[Mapping[int, str]] = {
     399: "T2 actual (one decimal)",
     400: "T1-T2 (one decimal)",
     404: "Meter Type",
+    # register 409: a combination of a bitfield and some duration tracking. Example values:
+    # 17184063489: dry 1-8 hrs, meter temperature too high: 9-24 hrs, no consumption: 9-24 hrs
+    # 17181966337: dry 1-8 hrs, meter temperature too high: 1-8 hrs, no consumption: 9-24 hrs
+    # 17179869185: dry 1-8 hrs, no consumption: 9-24 hrs
+    # 8589934593: dry 1-8 hrs, no consumption: 1-8 hrs
+    409: "Info hour counter",
+    440: "MaxFlow_H",
+    445: "MaxFlowDate_D",
+    446: "MinFlowDate_D",
+    # Seen in the logger. E.g. 128 is "meter temperature too high"
+    458: "Info code",
     473: "Energy E10",
     474: "Energy E11",
     477: "T3 time average day",
@@ -155,6 +182,7 @@ REGISTERS: Final[Mapping[int, str]] = {
     508: "P2 average hour",
     # Undocumented, but it "looks good" on a fresh meter from 2026
     582: "Maybe battery remaining",
+    583: "Accoustic noise last day",
     622: "V1 extra digit",
     # Undocumented, e.g., KWM2231
     640: "Meter type text",
