@@ -355,3 +355,48 @@ class CommandId(enum.Enum):
     GET_LOG_PAST_PRESENT = 0xA1
     GET_LOG_ID_PRESENT = 0xA2
     GET_LOG_TIME_PAST = 0xA3
+    LOGGER = 0xb8
+
+
+@enum.unique
+class LoggerSubCommandId(enum.IntEnum):
+    """Logger sub-commands"""
+    GET_CONFIGURATION = 0x05
+    GET_LOG_ID_PAST_ABS = 0x06
+    GET_LOG_LAST_ENTRY_PAST_ABS = 0x07
+    GET_LOG_ID = 0x08
+    GET_LOG_NEXT_FORMAT = 0x09
+
+
+@enum.unique
+class LoggerType(enum.IntEnum):
+    """Types of loggers"""
+    CONFIG = 0
+    INFO = 1
+    INTERVAL_YEAR = 2
+    INTERVAL_MONTH = 3
+    INTERVAL_DAY = 4
+    INTERVAL_HOUR = 5
+    INTERVAL_MIN1 = 6
+    INTERVAL_MIN2 = 7
+    SW_DOWNLOAD_SUCCESS = 8
+    SW_DOWNLOAD_AUDIT = 9
+
+class LoggerInfo(enum.Flag):
+    """Special situation of a log output"""
+    NO_LOG_ENTRIES = 1 << 0
+    OUT_OF_RANGE = 1 << 1
+    RESERVED_BIT2 = 1 << 1
+    UNSUPPORTED_REGISTER = 1 << 3
+    TRUNCATED_ENTRIES = 1 << 4
+    FORMAT_CHANGED = 1 << 5
+    TAIL_INCLUDED = 1 << 6
+    HEAD_INCLUDED = 1 << 7
+    MEMORY_ERROR = 1 << 8
+    INVALID_REQUEST = 1 << 9
+    RESERVED_BIT10 = 1 << 10
+    RESERVED_BIT11 = 1 << 11
+    RESERVED_BIT12 = 1 << 12
+    TRUNCATED_REGISTERS = 1 << 13
+    RESERVED_BIT14 = 1 << 14
+    RESERVED_BIT15 = 1 << 15

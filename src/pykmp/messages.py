@@ -167,6 +167,30 @@ class WithDataMixin(HasCommandIdAndName, Protocol):
     # Set only on instantiation via decode().
     data_raw: codec.ApplicationDataBytes | None = attrs.field(default=None)
 
+    @classmethod
+    def _read_field(cls, data, name, index, size, type_=None):
+        if (data_len := len(data.data)) < index + size:
+            raise codec.DataLengthUnexpectedError(
+                what=f"{cls.__name__}: cannot read {size} more bytes for {name} at offset {index}",
+                length_expected=index + size,
+                expected_is_minimum=True,
+                actual=data_len,
+            )
+        buf = data.data[index:index + size]
+        if type_ == int:
+            buf = int.from_bytes(buf, "big")
+        index += size
+        return (buf, index)
+
+    @classmethod
+    def _no_more_data(cls, data, expected):
+        if (data_len := len(data.data)) > expected:
+            raise codec.DataLengthUnexpectedError(
+                what=cls.__name__,
+                length_expected=expected,
+                actual=data_len,
+            )
+
 
 @attrs.define(auto_attribs=False, slots=False, kw_only=True)
 class GetTypeRequest(
@@ -652,3 +676,330 @@ class GetRegisterResponse(
 
 
 GetRegisterRequest.response_type = GetRegisterResponse
+
+@attrs.define(kw_only=True)
+class InvalidLoggerSubcommandError(codec.BaseCodecError):  # noqa: D101
+    subcommand: int
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"Logger subcommand ID {self.subcommand} is invalid."
+
+
+@attrs.define(kw_only=True)
+class InvalidLoggerTypeError(codec.BaseCodecError):  # noqa: D101
+    logger_type: int
+
+    def __str__(self) -> str:  # noqa: D105
+        return f"Logger type {self.logger_type} is invalid."
+
+
+def dont_repr_raw_data(cls, fields):
+    return [f.evolve(repr=False) if f.name == 'data_raw' else f for f in fields]
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True)
+class LoggerCommand(
+    BaseRequest["LoggerCommand"],
+    WithDataMixin,
+    SupportsDecode,
+    SupportsEncode,
+):
+    """Reading data loggers."""
+
+    response_type: ClassVar[type[LoggerResponse]]
+    command_id: ClassVar[int] = constants.CommandId.LOGGER.value
+    command_name: ClassVar[str] = "Logger"
+    subcommand: constants.LoggerSubCommandId = attrs.field()
+    logger_type: constants.LoggerType = attrs.field()
+
+    @classmethod
+    def decode(cls, data: codec.ApplicationData) -> Self:
+        cls._decode_validate_command_id(data.command_id)
+
+        index = 0
+        (subcommand, index) = cls._read_field(data, 'subcommand', index, 1, int)
+        try:
+            subcommand = constants.LoggerSubCommandId(data.data[0])
+        except ValueError:
+            raise InvalidLoggerSubcommandError(subcommand=data.data[0])
+
+        (logger_type, index) = cls._read_field(data, 'logger_type', index, 1, int)
+        try:
+            logger_type = constants.LoggerType(data.data[1])
+        except ValueError:
+            raise InvalidLoggerTypeError(logger_type=data.data[1])
+
+        matching_commands = [c for c in LoggerCommand.__subclasses__()
+                             if getattr(c, 'subcommand', None) is not None
+                             and c.subcommand == subcommand]
+        assert len(matching_commands) == 1
+        return matching_commands[0].decode(logger_type=logger_type, index=index, data=data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError # pragma: no cover
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogIDPastAbs(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS
+
+    log_id: int = attrs.field()
+    num_entries: int = attrs.field()
+    register_ids: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (log_id, index) = cls._read_field(data, 'log-id', index, 4, int)
+        (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+        (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
+        register_ids = []
+        for i in range(num_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids.append(rid)
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger_type=logger_type, data_raw=data.data,
+                   log_id=log_id,
+                   num_entries=num_entries,
+                   register_ids=register_ids)
+
+    def encode(self) -> codec.ApplicationData:
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger_type).to_bytes() \
+            + self.log_id.to_bytes(length=4) \
+            + self.num_entries.to_bytes(length=2) \
+            + len(self.register_ids).to_bytes()
+        for rid in self.register_ids:
+            raw += rid.to_bytes(length=2)
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogLastEntryPastAbs(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS
+
+    offset: int = attrs.field()
+    num_entries: int = attrs.field()
+    register_ids: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (offset, index) = cls._read_field(data, 'log-id', index, 2, int)
+        (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+        (num_regs, index) = cls._read_field(data, 'num-regs', index, 1, int)
+        register_ids = []
+        for i in range(num_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids.append(rid)
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger_type=logger_type, data_raw=data.data,
+                   offset=offset,
+                   num_entries=num_entries,
+                   register_ids=register_ids)
+
+    def encode(self) -> codec.ApplicationData:
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger_type).to_bytes() \
+            + self.offset.to_bytes(length=2) \
+            + self.num_entries.to_bytes(length=2) \
+            + len(self.register_ids).to_bytes()
+        for rid in self.register_ids:
+            raw += rid.to_bytes(length=2)
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogConfiguration(LoggerCommand):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_CONFIGURATION
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        cls._no_more_data(data, index)
+        return cls(subcommand=cls.subcommand, logger_type=logger_type, data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raw = int(self.subcommand).to_bytes() \
+            + int(self.logger_type).to_bytes()
+        return codec.ApplicationData(
+            command_id=self.command_id, data=codec.ApplicationDataBytes(raw)
+        )
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True)
+class LoggerResponse(
+    BaseResponse[LoggerCommand],
+    WithDataMixin,
+    SupportsDecode,
+    SupportsEncode,
+):
+    """Response with log data"""
+
+    request_type: ClassVar[type] = LoggerCommand
+    command_id: ClassVar[int] = LoggerCommand.command_id
+    command_name: ClassVar[str] = LoggerCommand.command_name
+    subcommand: constants.LoggerSubCommandId = attrs.field()
+    logger_type: constants.LoggerType = attrs.field()
+
+    @classmethod
+    def decode(cls, data: codec.ApplicationData) -> Self:
+        cls._decode_validate_command_id(data.command_id)
+        index = 0
+        (subcommand, index) = cls._read_field(data, 'subcommand', index, 1, int)
+        try:
+            subcommand = constants.LoggerSubCommandId(data.data[0])
+        except ValueError:
+            raise InvalidLoggerSubcommandError(subcommand=data.data[0])
+
+        (logger_type, index) = cls._read_field(data, 'logger_type', index, 1, int)
+        try:
+            logger_type = constants.LoggerType(data.data[1])
+        except ValueError:
+            raise InvalidLoggerTypeError(logger_type=data.data[1])
+
+        matching_responses = [r for r in LoggerResponse.__subclasses__()
+                              if getattr(r, 'subcommand', None) is not None
+                              and r.subcommand == subcommand]
+        assert len(matching_responses) == 1
+        return matching_responses[0].decode(logger_type=logger_type, index=index, data=data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError # pragma: no cover
+
+
+LoggerCommand.response_type = LoggerResponse
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class LoggerConfigResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_CONFIGURATION
+    date1_format = attrs.field()
+    date1 = attrs.field()
+    date2_format = attrs.field()
+    date2 = attrs.field()
+    max_interval_records_format = attrs.field()
+    max_interval_records = attrs.field()
+    interval_format = attrs.field()
+    interval = attrs.field()
+    depth: int = attrs.field()
+    register_ids: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        (date1_format, index) = cls._read_field(data, 'date1-format', index, 1, int)
+        (date1, index) = cls._read_field(data, 'date1', index, 2)
+        (date2_format, index) = cls._read_field(data, 'date2-format', index, 1, int)
+        (date2, index) = cls._read_field(data, 'date2', index, 2)
+        (max_interval_records_format, index) = cls._read_field(data, 'max-interval-records-format', index, 1, int)
+        (max_interval_records, index) = cls._read_field(data, 'max-interval-records', index, 1, int)
+        (interval_format, index) = cls._read_field(data, 'interval-format', index, 1, int)
+        (interval, index) = cls._read_field(data, 'interval', index, 1, int)
+        (depth, index) = cls._read_field(data, 'depth', index, 2, int)
+        (num_regs, index) = cls._read_field(data, 'number-of-registers', index, 1, int)
+        register_ids = []
+        for i in range(num_regs):
+            (rid, index) = cls._read_field(data, f'register-{i}', index, 2, int)
+            register_ids.append(rid)
+        cls._no_more_data(data, index)
+
+        return cls(subcommand=cls.subcommand, logger_type=logger_type,
+                   date1=date1,
+                   date1_format=date1_format,
+                   date2=date2,
+                   date2_format=date2_format,
+                   max_interval_records=max_interval_records,
+                   max_interval_records_format=max_interval_records_format,
+                   interval=interval,
+                   interval_format=interval_format,
+                   depth=depth,
+                   register_ids=register_ids,
+                   data_raw=data.data)
+
+    def encode(self) -> codec.ApplicationData:
+        raise NotImplementedError # pragma: no cover
+
+
+def _decode_log_readout(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+    (num_entries, index) = cls._read_field(data, 'num-entries', index, 2, int)
+    (num_regs, index) = cls._read_field(data, 'num-registers', index, 1, int)
+    (first_log_id, index) = cls._read_field(data, 'first-log-id', index, 4, int)
+    (last_log_id_in_meter, index) = cls._read_field(data, 'last-log-id', index, 4, int)
+    (info, index) = cls._read_field(data, 'info', index, 2, int)
+
+    register_ids = []
+    register_units = []
+    register_value_lengths = []
+    register_sie = []
+    log = []
+    row = []
+
+    if num_entries:
+        for n in range(num_regs):
+            # FIXME: save format
+            (rid, index) = cls._read_field(data, f'row-0-rid-{n}', index, 2, int)
+            register_ids.append(rid)
+            (fmt_unit, index) = cls._read_field(data, f'row-0-format-{n}-unit', index, 1, int)
+            register_units.append(fmt_unit)
+            (fmt_len, index) = cls._read_field(data, f'row-0-format-{n}-size', index, 1, int)
+            register_value_lengths.append(fmt_len)
+            (fmt_sie, index) = cls._read_field(data, f'row-format-{n}-sie', index, 1)
+            register_sie.append(fmt_sie)
+            (value, index) = cls._read_field(data, f'row-0-value-{n}', index, fmt_len)
+
+            blob = fmt_len.to_bytes(1, 'big') + fmt_sie + value
+            v = RegisterData(
+                id_=cast(RegisterID, rid),
+                unit=cast(RegisterUnit, fmt_unit),
+                value=cast(RegisterValueBytes, blob),
+            )
+            row.append(v)
+        log.append(row)
+
+        for i in range(1, num_entries):
+            row = []
+            for n in range(num_regs):
+                (val, index) = cls._read_field(data, f'row-{i}-value-{n}', index, register_value_lengths[n])
+                blob = register_value_lengths[n].to_bytes(1, 'big') + register_sie[n] + val
+                v = RegisterData(
+                    id_=cast(RegisterID, register_ids[n]),
+                    unit=cast(RegisterUnit, register_units[n]),
+                    value=cast(RegisterValueBytes, blob),
+                )
+                row.append(v)
+            log.append(row)
+
+    cls._no_more_data(data, index)
+
+    return cls(subcommand=cls.subcommand, logger_type=logger_type, data_raw=data.data,
+               first_log_id=first_log_id,
+               last_log_id_in_meter=last_log_id_in_meter,
+               info=constants.LoggerInfo(info),
+               log=log)
+
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogIDPastAbsResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS
+
+    first_log_id: int = attrs.field()
+    last_log_id_in_meter: int = attrs.field()
+    info: constants.LoggerInfo = attrs.field()
+    log: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        return _decode_log_readout(cls, logger_type, index, data)
+
+@attrs.define(auto_attribs=False, slots=False, kw_only=True, field_transformer=dont_repr_raw_data)
+class GetLogLastEntryPastAbsResponse(LoggerResponse):
+    subcommand: ClassVar[int] = constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS
+
+    first_log_id: int = attrs.field()
+    last_log_id_in_meter: int = attrs.field()
+    info: constants.LoggerInfo = attrs.field()
+    log: list = attrs.field()
+
+    @classmethod
+    def decode(cls, logger_type: constants.LoggerType, index: int, data: codec.ApplicationData) -> Self:
+        return _decode_log_readout(cls, logger_type, index, data)
