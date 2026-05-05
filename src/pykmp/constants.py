@@ -172,6 +172,8 @@ REGISTERS: Final[Mapping[int, str]] = {
     446: "MinFlowDate_D",
     # Seen in the logger. E.g. 128 is "meter temperature too high"
     458: "Info code",
+    461: "Ambient temperature high limit",
+    462: "Ambient temperature low limit",
     473: "Energy E10",
     474: "Energy E11",
     477: "T3 time average day",
@@ -180,14 +182,22 @@ REGISTERS: Final[Mapping[int, str]] = {
     506: "P2 average day",
     507: "P1 average hour",
     508: "P2 average hour",
+    563: "Leak alarm threshold",
+    564: "Burst alarm threshold",
     # Undocumented, but it "looks good" on a fresh meter from 2026
     582: "Maybe battery remaining",
     583: "Accoustic noise last day",
+    # Undocumented, e.g. "KAW"
+    586: "WM-Bus vendor string",
     622: "V1 extra digit",
+    # Undocumented: full meter ID with vendor (register 586) and serial number (register 1001)
+    625: "WM-Bus complete meter id",
     # Undocumented, e.g., KWM2231
     640: "Meter type text",
     # Undocumented, but it matches the actual interval on Multical 303
     675: "wM-Bus transmission interval",
+    # Undocumented, e.g., MC303
+    676: "Heat meter type text",
     # Undocumented (692-721), but it looks like a histogram readout
     692: "Volume in flow bucket 1",
     697: "Volume in flow bucket 2",
