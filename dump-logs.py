@@ -145,19 +145,29 @@ except OSError as e:
         logger.debug('No previous data snapshot')
     else:
         raise
-resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in (
+
+resps = []
+for regs in ((
     # timestamp
     348,
     # info code in bit format
     369,
     # E1, V1
     # 60, 68,
-    # hi-res E1, V1
-    266, 239,
     # T1, T2, flow-V1, power
     86, 87, 74, 80,
-)]))
-regs = [registers.RegisterOutput.from_register_data(reg) for reg in resp.registers.values()]
+),
+             (
+    # timestamp
+    348,
+    # hi-res E1, V1
+    266, 239,
+    # Temp x m3 E8, E9
+    97, 110,
+             )):
+    resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in regs]))
+    resps = resps + [resp]
+regs = [registers.RegisterOutput.from_register_data(reg) for resp in resps for reg in resp.registers.values()]
 OUT[datetime.datetime.now().isoformat()] = [
     {
         'rid': parsed.id_int,
