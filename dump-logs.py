@@ -224,6 +224,13 @@ for logger_type, reg_ids in what_to_read.items():
     total_written = 0
     logger.info(f' will read {newest_lid_in_meter - lid_lowest + 1} entries ({lid_lowest} .. {newest_lid_in_meter})')
 
+    # GetLogIDPastAbs has no documented byte-budget parameter (unlike the GetLogTimePresent
+    # family in §4.2, which has an explicit MaxL and a size formula) - the meter's own
+    # buffer limit is undocumented and only visible as a short response. Start at the
+    # protocol's own ceiling and ratchet down (never back up) the first time we see a
+    # truncated response, so that limit gets rediscovered once per run, not once per page.
+    page_size = PAGE_SIZE_MAX
+
     # Walk the log oldest-page-first (not newest-first) and checkpoint to disk after each
     # page: on GetLogIDPastAbs, a truncated response always drops the *older* end of the
     # requested range, so anchoring pages at the low (oldest) end and persisting each one
@@ -232,7 +239,7 @@ for logger_type, reg_ids in what_to_read.items():
     # (lid_lowest = max(lid_on_disk, oldest_lid_in_meter)) would then silently skip forever.
     window_bottom = lid_lowest
     while window_bottom <= newest_lid_in_meter:
-        window_top = min(window_bottom + PAGE_SIZE_MAX - 1, newest_lid_in_meter)
+        window_top = min(window_bottom + page_size - 1, newest_lid_in_meter)
         DATA = []
 
         for rid in reg_ids:
@@ -240,13 +247,14 @@ for logger_type, reg_ids in what_to_read.items():
             lid = window_top
             while lid >= window_bottom:
                 logger.info(f'Progress for {logger_type.name}: {total_written + len(DATA)} / {total_wanted}')
+                requested = min(lid - window_bottom + 1, page_size)
                 try:
                     resp = send_and_recv(comm,
                                          messages.GetLogIDPastAbs(
                                              subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
                                              logger_type=logger_type,
                                              log_id=lid,
-                                             num_entries=min(lid - window_bottom + 1, PAGE_SIZE_MAX),
+                                             num_entries=requested,
                                              register_ids=[rid],
                                              )
                                          )
@@ -264,6 +272,9 @@ for logger_type, reg_ids in what_to_read.items():
                 if len(resp.log) < 1:
                     logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, lid)
                     break
+                if len(resp.log) < requested:
+                    logger.info('%s: learned safe page size %d -> %d', logger_type.name, page_size, len(resp.log))
+                    page_size = len(resp.log)
                 # A truncated response is still anchored at `lid` and covers its newer end,
                 # so decrementing by however much actually came back keeps this loop
                 # contiguous down to window_bottom regardless of the device's real buffer size.
