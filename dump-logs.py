@@ -181,8 +181,17 @@ os.rename(FILE_NAME + '.new', FILE_NAME)
 
 # GetLogIDPastAbs's NOE field is 2 bytes wide, so 0xffff is the biggest single-request
 # page the protocol allows; the meter's own buffer may still truncate below that
-# (LoggerInfo bit 4), which we detect via a short response and retry at that smaller size.
-PAGE_SIZE_MAX = 0xffff
+# (LoggerInfo bit 4). Each register gets its own learned page size (see
+# pykmp.logpaging.fill_window), since different registers pack different value byte
+# widths per record and so hit that buffer limit at different entry counts.
+DEFAULT_PAGE_SIZE = 0xffff
+
+# How many LIDs to fully read - for every register - before checkpointing to disk.
+# Deliberately decoupled from DEFAULT_PAGE_SIZE: a register's real transfer limit may
+# end up much smaller after truncation, in which case filling one checkpoint window
+# just takes several requests for that register instead of one; that doesn't change
+# how often we checkpoint.
+CHECKPOINT_WINDOW_SIZE = 0xffff
 
 for logger_type, reg_ids in what_to_read.items():
     FILE_NAME = f'{OUT_PREFIX}/{sn}/{logger_type.name}.json'
@@ -224,87 +233,75 @@ for logger_type, reg_ids in what_to_read.items():
     total_written = 0
     logger.info(f' will read {newest_lid_in_meter - lid_lowest + 1} entries ({lid_lowest} .. {newest_lid_in_meter})')
 
-    # GetLogIDPastAbs has no documented byte-budget parameter (unlike the GetLogTimePresent
-    # family in §4.2, which has an explicit MaxL and a size formula) - the meter's own
-    # buffer limit is undocumented and only visible as a short response. Start at the
-    # protocol's own ceiling and ratchet down (never back up) the first time we see a
-    # truncated response, so that limit gets rediscovered once per run, not once per page.
-    page_size = PAGE_SIZE_MAX
+    # Learned independently per register (RID -> page size): different registers pack
+    # different value byte widths per record, so they hit the meter's buffer limit at
+    # different entry counts. Reset fresh for each logger_type, since its register set
+    # (and their formats) differs.
+    page_sizes = {}
+    DATA = []
 
-    # Walk the log oldest-page-first (not newest-first) and checkpoint to disk after each
-    # page: on GetLogIDPastAbs, a truncated response always drops the *older* end of the
-    # requested range, so anchoring pages at the low (oldest) end and persisting each one
-    # as it completes means an interrupted run leaves a gap-free prefix on disk, instead of
-    # a scattering of recent LIDs with an unread hole further back that the resume logic
-    # (lid_lowest = max(lid_on_disk, oldest_lid_in_meter)) would then silently skip forever.
-    window_bottom = lid_lowest
-    while window_bottom <= newest_lid_in_meter:
-        window_top = min(window_bottom + page_size - 1, newest_lid_in_meter)
-        DATA = []
+    def fetch(rid, log_id, num_entries):
+        logger.info(f'Progress for {logger_type.name}: {total_written + len(DATA)} / {total_wanted}')
+        try:
+            resp = send_and_recv(comm,
+                                 messages.GetLogIDPastAbs(
+                                     subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                     logger_type=logger_type,
+                                     log_id=log_id,
+                                     num_entries=num_entries,
+                                     register_ids=[rid],
+                                     )
+                                 )
+        except codec.CrcChecksumInvalidError as e:
+            # Not a buffer-size truncation - just one bad LID; record it and move on,
+            # without touching page_sizes[rid].
+            FAILURES.append(f'{logger_type.name} LID {log_id} RID {rid}: {repr(e)}')
+            logger.error('CRC error when reading LID %s RID %s: %s', log_id, rid, repr(e))
+            DATA.append({
+                'lid': log_id,
+                'rid': rid,
+                'error': str(e),
+            })
+            return (1, False)
 
-        for rid in reg_ids:
-            # reading each register separately saves bandwidth because each format thingy is only repeated once
-            def fetch(log_id, num_entries, rid=rid):
-                logger.info(f'Progress for {logger_type.name}: {total_written + len(DATA)} / {total_wanted}')
-                try:
-                    resp = send_and_recv(comm,
-                                         messages.GetLogIDPastAbs(
-                                             subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                             logger_type=logger_type,
-                                             log_id=log_id,
-                                             num_entries=num_entries,
-                                             register_ids=[rid],
-                                             )
-                                         )
-                except codec.CrcChecksumInvalidError as e:
-                    # Not a buffer-size truncation - just one bad LID; record it and move
-                    # on, without touching page_size.
-                    FAILURES.append(f'{logger_type.name} LID {log_id} RID {rid}: {repr(e)}')
-                    logger.error('CRC error when reading LID %s RID %s: %s', log_id, rid, repr(e))
-                    DATA.append({
-                        'lid': log_id,
-                        'rid': rid,
-                        'error': str(e),
-                    })
-                    return (1, False)
+        if len(resp.log) < 1:
+            logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, log_id)
+            return (0, False)
 
-                if len(resp.log) < 1:
-                    logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, log_id)
-                    return (0, False)
+        for i, row in enumerate(resp.log):
+            this_lid = resp.first_log_id - i
+            reg = row[0]
+            parsed = registers.RegisterOutput.from_register_data(reg)
+            new_entry = {
+                'lid': this_lid,
+                'rid': reg.id_,
+                'name': parsed.name,
+                'value': parsed.value_str,
+                'unit': parsed.unit_str,
+            }
+            if this_lid == lid_on_disk:
+                # sanity check whether we're still reading the same data
+                old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
+                if not OUT:
+                    # no stored data, so nothing to check against
+                    pass
+                elif len(old_entry) != 1:
+                    # most likely a "data gap"
+                    logger.warning('No old entry for LID %s RID %s', this_lid, rid)
+                elif old_entry[0].get('value') != parsed.value_str:
+                    # meh
+                    logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
+                    FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
+                else:
+                    # yay, sanity check passes, do not save a duplicate entry
+                    continue
+            DATA.append(new_entry)
 
-                for i, row in enumerate(resp.log):
-                    this_lid = resp.first_log_id - i
-                    reg = row[0]
-                    parsed = registers.RegisterOutput.from_register_data(reg)
-                    new_entry = {
-                        'lid': this_lid,
-                        'rid': reg.id_,
-                        'name': parsed.name,
-                        'value': parsed.value_str,
-                        'unit': parsed.unit_str,
-                    }
-                    if this_lid == lid_on_disk:
-                        # sanity check whether we're still reading the same data
-                        old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
-                        if not OUT:
-                            # no stored data, so nothing to check against
-                            pass
-                        elif len(old_entry) != 1:
-                            # most likely a "data gap"
-                            logger.warning('No old entry for LID %s RID %s', this_lid, rid)
-                        elif old_entry[0].get('value') != parsed.value_str:
-                            # meh
-                            logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
-                            FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
-                        else:
-                            # yay, sanity check passes, do not save a duplicate entry
-                            continue
-                    DATA.append(new_entry)
+        return (len(resp.log), len(resp.log) < num_entries)
 
-                return (len(resp.log), len(resp.log) < num_entries)
-
-            page_size = logpaging.fill_window(window_bottom, window_top, page_size, fetch)
-
+    def checkpoint(window_bottom, window_top):
+        global DATA, total_written
+        logger.info(f'Checkpointing {logger_type.name} window {window_bottom} .. {window_top}')
         total_written += len(DATA)
         all_lids = [x['lid'] for x in DATA]
         all_lids.sort()
@@ -319,8 +316,27 @@ for logger_type, reg_ids in what_to_read.items():
         with open(FILE_NAME + '.new', 'w') as f:
             json.dump(OUT, f, indent=2)
         os.rename(FILE_NAME + '.new', FILE_NAME)
+        DATA = []
 
-        window_bottom = window_top + 1
+    # Walk the log oldest-window-first (not newest-first) and checkpoint to disk after
+    # each window: on GetLogIDPastAbs, a truncated response always drops the *older* end
+    # of the requested range, so anchoring windows at the low (oldest) end and persisting
+    # each one only once it's fully read - for every register - means an interrupted run
+    # (a dropped connection, a crash) leaves a gap-free prefix on disk: the in-progress
+    # window's work is simply lost and repeated next time, never a scattering of recent
+    # LIDs with an unread hole further back that the resume logic
+    # (lid_lowest = max(lid_on_disk, oldest_lid_in_meter)) would then silently skip
+    # forever.
+    logpaging.read_checkpointed(
+        logpaging.ReadRange(
+            lo=lid_lowest,
+            hi=newest_lid_in_meter,
+            checkpoint_window_size=CHECKPOINT_WINDOW_SIZE,
+            reg_ids=reg_ids,
+            default_page_size=DEFAULT_PAGE_SIZE,
+        ),
+        page_sizes, fetch, checkpoint,
+    )
 
 for f in FAILURES:
     logger.error(f'FAILED entries: {f}')
