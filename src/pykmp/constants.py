@@ -156,7 +156,7 @@ REGISTERS: Final[Mapping[int, str]] = {
     388: "Flow V1 min month time",
     389: "Power max month time",
     390: "Power min month time",
-    394: "Config XYZ",
+    393: "Config XYZ",
     398: "T1 actual (one decimal)",
     399: "T2 actual (one decimal)",
     400: "T1-T2 (one decimal)",
