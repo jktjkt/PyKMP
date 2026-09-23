@@ -179,6 +179,11 @@ with open(FILE_NAME + '.new', 'w') as f:
     json.dump(OUT, f, indent=2)
 os.rename(FILE_NAME + '.new', FILE_NAME)
 
+# GetLogIDPastAbs's NOE field is 2 bytes wide, so 0xffff is the biggest single-request
+# page the protocol allows; the meter's own buffer may still truncate below that
+# (LoggerInfo bit 4), which we detect via a short response and retry at that smaller size.
+PAGE_SIZE_MAX = 0xffff
+
 for logger_type, reg_ids in what_to_read.items():
     FILE_NAME = f'{OUT_PREFIX}/{sn}/{logger_type.name}.json'
     OUT = {}
@@ -198,8 +203,6 @@ for logger_type, reg_ids in what_to_read.items():
         else:
             raise
 
-    DATA = []
-
     # read the oldest/newest log-id in the meter
     resp = send_and_recv(comm,
                          messages.GetLogLastEntryPastAbs(subcommand=constants.LoggerSubCommandId.GET_LOG_LAST_ENTRY_PAST_ABS,
@@ -217,81 +220,99 @@ for logger_type, reg_ids in what_to_read.items():
         logger.info(' -> no new entries')
         continue
 
+    total_wanted = len(reg_ids) * (newest_lid_in_meter - lid_lowest + 1)
+    total_written = 0
     logger.info(f' will read {newest_lid_in_meter - lid_lowest + 1} entries ({lid_lowest} .. {newest_lid_in_meter})')
-    for rid in reg_ids:
-        # reading each register separately saves bandwidth because each format thingy is only repeated once
 
-        # too bad we "have" to start at the newest entry...
-        lid = newest_lid_in_meter
-        while lid >= lid_lowest:
-            logger.info(f'Progress for {logger_type.name}: {len(DATA)} / {len(reg_ids) * (newest_lid_in_meter - lid_lowest + 1)}')
-            try:
-                resp = send_and_recv(comm,
-                                     messages.GetLogIDPastAbs(
-                                         subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
-                                         logger_type=logger_type,
-                                         log_id=lid,
-                                         num_entries=min(lid - lid_lowest + 1, 0xffff),
-                                         register_ids=[rid],
+    # Walk the log oldest-page-first (not newest-first) and checkpoint to disk after each
+    # page: on GetLogIDPastAbs, a truncated response always drops the *older* end of the
+    # requested range, so anchoring pages at the low (oldest) end and persisting each one
+    # as it completes means an interrupted run leaves a gap-free prefix on disk, instead of
+    # a scattering of recent LIDs with an unread hole further back that the resume logic
+    # (lid_lowest = max(lid_on_disk, oldest_lid_in_meter)) would then silently skip forever.
+    window_bottom = lid_lowest
+    while window_bottom <= newest_lid_in_meter:
+        window_top = min(window_bottom + PAGE_SIZE_MAX - 1, newest_lid_in_meter)
+        DATA = []
+
+        for rid in reg_ids:
+            # reading each register separately saves bandwidth because each format thingy is only repeated once
+            lid = window_top
+            while lid >= window_bottom:
+                logger.info(f'Progress for {logger_type.name}: {total_written + len(DATA)} / {total_wanted}')
+                try:
+                    resp = send_and_recv(comm,
+                                         messages.GetLogIDPastAbs(
+                                             subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
+                                             logger_type=logger_type,
+                                             log_id=lid,
+                                             num_entries=min(lid - window_bottom + 1, PAGE_SIZE_MAX),
+                                             register_ids=[rid],
+                                             )
                                          )
-                                     )
-            except codec.CrcChecksumInvalidError as e:
-                FAILURES.append(f'{logger_type.name} LID {lid} RID {rid}: {repr(e)}')
-                logger.error('CRC error when reading LID %s RID %s: %s', lid, rid, repr(e))
-                DATA.append({
-                    'lid': lid,
-                    'rid': rid,
-                    'error': str(e),
-                })
-                lid -= 1
-                continue
+                except codec.CrcChecksumInvalidError as e:
+                    FAILURES.append(f'{logger_type.name} LID {lid} RID {rid}: {repr(e)}')
+                    logger.error('CRC error when reading LID %s RID %s: %s', lid, rid, repr(e))
+                    DATA.append({
+                        'lid': lid,
+                        'rid': rid,
+                        'error': str(e),
+                    })
+                    lid -= 1
+                    continue
 
-            if len(resp.log) < 1:
-                logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, lid)
-                break
-            lid -= len(resp.log)
-            for i, row in enumerate(resp.log):
-                this_lid = resp.first_log_id - i
-                reg = row[0]
-                parsed = registers.RegisterOutput.from_register_data(reg)
-                new_entry = {
-                    'lid': this_lid,
-                    'rid': reg.id_,
-                    'name': parsed.name,
-                    'value': parsed.value_str,
-                    'unit': parsed.unit_str,
-                }
-                if this_lid == lid_on_disk:
-                    # sanity check whether we're still reading the same data
-                    old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
-                    if not OUT:
-                        # no stored data, so nothing to check against
-                        pass
-                    elif len(old_entry) != 1:
-                        # most likely a "data gap"
-                        logger.warning('No old entry for LID %s RID %s', this_lid, rid)
-                    elif old_entry[0].get('value') != parsed.value_str:
-                        # meh
-                        logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
-                        FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
-                    else:
-                        # yay, sanity check passes, do not save a duplicate entry
-                        continue
-                DATA.append(new_entry)
+                if len(resp.log) < 1:
+                    logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, lid)
+                    break
+                # A truncated response is still anchored at `lid` and covers its newer end,
+                # so decrementing by however much actually came back keeps this loop
+                # contiguous down to window_bottom regardless of the device's real buffer size.
+                lid -= len(resp.log)
+                for i, row in enumerate(resp.log):
+                    this_lid = resp.first_log_id - i
+                    reg = row[0]
+                    parsed = registers.RegisterOutput.from_register_data(reg)
+                    new_entry = {
+                        'lid': this_lid,
+                        'rid': reg.id_,
+                        'name': parsed.name,
+                        'value': parsed.value_str,
+                        'unit': parsed.unit_str,
+                    }
+                    if this_lid == lid_on_disk:
+                        # sanity check whether we're still reading the same data
+                        old_entry = [x for x in OUT.get(str(this_lid), []) if str(x.get('rid')) == str(rid)]
+                        if not OUT:
+                            # no stored data, so nothing to check against
+                            pass
+                        elif len(old_entry) != 1:
+                            # most likely a "data gap"
+                            logger.warning('No old entry for LID %s RID %s', this_lid, rid)
+                        elif old_entry[0].get('value') != parsed.value_str:
+                            # meh
+                            logger.error('Value mismatch for LID %s RID %s: (old) %s != %s (new)', this_lid, rid, old_entry[0].get('value'), parsed.value_str)
+                            FAILURES.append(f'{logger_type.name} LID {this_lid} RID {rid}: old value on disk {old_entry[0].get("value")} != new {parsed.value_str}')
+                        else:
+                            # yay, sanity check passes, do not save a duplicate entry
+                            continue
+                    DATA.append(new_entry)
 
-    all_lids = [x['lid'] for x in DATA]
-    all_lids.sort()
-    for lid in set(all_lids):
-        def without_lid(x):
-            r = copy.copy(x)
-            del r['lid']
-            return r
-        matching = [without_lid(x) for x in DATA if x['lid'] == lid]
-        matching.sort(key=lambda x: x['rid'])
-        OUT[lid] = matching
-    with open(FILE_NAME + '.new', 'w') as f:
-        json.dump(OUT, f, indent=2)
-    os.rename(FILE_NAME + '.new', FILE_NAME)
+        total_written += len(DATA)
+        all_lids = [x['lid'] for x in DATA]
+        all_lids.sort()
+        for lid in set(all_lids):
+            def without_lid(x):
+                r = copy.copy(x)
+                del r['lid']
+                return r
+            matching = [without_lid(x) for x in DATA if x['lid'] == lid]
+            matching.sort(key=lambda x: x['rid'])
+            OUT[lid] = matching
+        with open(FILE_NAME + '.new', 'w') as f:
+            json.dump(OUT, f, indent=2)
+        os.rename(FILE_NAME + '.new', FILE_NAME)
+
+        window_bottom = window_top + 1
 
 for f in FAILURES:
     logger.error(f'FAILED entries: {f}')
