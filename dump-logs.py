@@ -4,7 +4,7 @@ import errno
 import json
 import logging
 import pykmp
-from pykmp import client, codec, constants, messages, registers
+from pykmp import client, codec, constants, logpaging, messages, registers
 import os
 import sys
 import time
@@ -244,41 +244,34 @@ for logger_type, reg_ids in what_to_read.items():
 
         for rid in reg_ids:
             # reading each register separately saves bandwidth because each format thingy is only repeated once
-            lid = window_top
-            while lid >= window_bottom:
+            def fetch(log_id, num_entries, rid=rid):
                 logger.info(f'Progress for {logger_type.name}: {total_written + len(DATA)} / {total_wanted}')
-                requested = min(lid - window_bottom + 1, page_size)
                 try:
                     resp = send_and_recv(comm,
                                          messages.GetLogIDPastAbs(
                                              subcommand=constants.LoggerSubCommandId.GET_LOG_ID_PAST_ABS,
                                              logger_type=logger_type,
-                                             log_id=lid,
-                                             num_entries=requested,
+                                             log_id=log_id,
+                                             num_entries=num_entries,
                                              register_ids=[rid],
                                              )
                                          )
                 except codec.CrcChecksumInvalidError as e:
-                    FAILURES.append(f'{logger_type.name} LID {lid} RID {rid}: {repr(e)}')
-                    logger.error('CRC error when reading LID %s RID %s: %s', lid, rid, repr(e))
+                    # Not a buffer-size truncation - just one bad LID; record it and move
+                    # on, without touching page_size.
+                    FAILURES.append(f'{logger_type.name} LID {log_id} RID {rid}: {repr(e)}')
+                    logger.error('CRC error when reading LID %s RID %s: %s', log_id, rid, repr(e))
                     DATA.append({
-                        'lid': lid,
+                        'lid': log_id,
                         'rid': rid,
                         'error': str(e),
                     })
-                    lid -= 1
-                    continue
+                    return (1, False)
 
                 if len(resp.log) < 1:
-                    logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, lid)
-                    break
-                if len(resp.log) < requested:
-                    logger.info('%s: learned safe page size %d -> %d', logger_type.name, page_size, len(resp.log))
-                    page_size = len(resp.log)
-                # A truncated response is still anchored at `lid` and covers its newer end,
-                # so decrementing by however much actually came back keeps this loop
-                # contiguous down to window_bottom regardless of the device's real buffer size.
-                lid -= len(resp.log)
+                    logger.error('Cannot read register %s at log_id %s: got no data back, giving up', rid, log_id)
+                    return (0, False)
+
                 for i, row in enumerate(resp.log):
                     this_lid = resp.first_log_id - i
                     reg = row[0]
@@ -307,6 +300,10 @@ for logger_type, reg_ids in what_to_read.items():
                             # yay, sanity check passes, do not save a duplicate entry
                             continue
                     DATA.append(new_entry)
+
+                return (len(resp.log), len(resp.log) < num_entries)
+
+            page_size = logpaging.fill_window(window_bottom, window_top, page_size, fetch)
 
         total_written += len(DATA)
         all_lids = [x['lid'] for x in DATA]
