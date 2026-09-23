@@ -396,7 +396,7 @@ class LoggerInfo(enum.Flag):
     """Special situation of a log output"""
     NO_LOG_ENTRIES = 1 << 0
     OUT_OF_RANGE = 1 << 1
-    RESERVED_BIT2 = 1 << 1
+    RESERVED_BIT2 = 1 << 2
     UNSUPPORTED_REGISTER = 1 << 3
     TRUNCATED_ENTRIES = 1 << 4
     FORMAT_CHANGED = 1 << 5
