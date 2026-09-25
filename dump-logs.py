@@ -52,28 +52,35 @@ os.makedirs(f'{OUT_PREFIX}/{sn}', exist_ok=True)
 FAILURES = []
 
 what_to_read = {
-    constants.LoggerType.INTERVAL_YEAR: [
+    constants.LoggerType.INTERVAL_MIN1: [
+        # timestamp
+        348,
+        # E1, V1, T1, T2, flow-V1, power
+        60, 68, 86, 87, 74, 80,
+    ],
+    constants.LoggerType.INTERVAL_HOUR: [
         # timestamp
         348,
 
-        # E1, V1,
-        60, 68,
-        # Temp x m3 E8, E9
-        97, 110,
-        # M1 mass: why not, it's an yearly logger...
-        72,
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
 
-        # flow v1 max per year: date, time, value
-        123, 383, 124,
-        # flow v1 min per year
-        125, 384, 126,
-        # max power
-        127, 385, 128,
-        # min power
-        129, 386, 130,
+        # avg T1 & T2
+        381, 382,
 
-        # operating/error hours
-        1004, 175,
+        # let's skip info codes/bits, data quality -- prefer readout speed
+        # 369, 99, 338,
+    ],
+    constants.LoggerType.INTERVAL_DAY: [
+        # timestamp
+        348,
+
+        # E1, V1, instant T1 & T2, flow, power
+        60, 68, 86, 87, 74, 80,
+
+        # avg T1 & T2
+        379, 380,
+
         # info codes/bits, data quality
         369, 99, 338,
     ],
@@ -100,37 +107,30 @@ what_to_read = {
         # info codes/bits, data quality
         369, 99, 338,
     ],
-    constants.LoggerType.INTERVAL_DAY: [
+    constants.LoggerType.INTERVAL_YEAR: [
         # timestamp
         348,
 
-        # E1, V1, instant T1 & T2, flow, power
-        60, 68, 86, 87, 74, 80,
+        # E1, V1,
+        60, 68,
+        # Temp x m3 E8, E9
+        97, 110,
+        # M1 mass: why not, it's an yearly logger...
+        72,
 
-        # avg T1 & T2
-        379, 380,
+        # flow v1 max per year: date, time, value
+        123, 383, 124,
+        # flow v1 min per year
+        125, 384, 126,
+        # max power
+        127, 385, 128,
+        # min power
+        129, 386, 130,
 
+        # operating/error hours
+        1004, 175,
         # info codes/bits, data quality
         369, 99, 338,
-    ],
-    constants.LoggerType.INTERVAL_HOUR: [
-        # timestamp
-        348,
-
-        # E1, V1, instant T1 & T2, flow, power
-        60, 68, 86, 87, 74, 80,
-
-        # avg T1 & T2
-        381, 382,
-
-        # let's skip info codes/bits, data quality -- prefer readout speed
-        # 369, 99, 338,
-    ],
-    constants.LoggerType.INTERVAL_MIN1: [
-        # timestamp
-        348,
-        # E1, V1, T1, T2, flow-V1, power
-        60, 68, 86, 87, 74, 80,
     ],
 }
 
