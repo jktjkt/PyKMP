@@ -153,7 +153,6 @@ except OSError as e:
     else:
         raise
 
-resps = []
 for regs in ((
     # timestamp
     348,
@@ -172,16 +171,17 @@ for regs in ((
     # Temp x m3 E8, E9
     97, 110,
              )):
+    now = datetime.datetime.now().isoformat()
     resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in regs]))
-    resps = resps + [resp]
-regs = [registers.RegisterOutput.from_register_data(reg) for resp in resps for reg in resp.registers.values()]
-OUT[datetime.datetime.now().isoformat()] = [
-    {
-        'rid': parsed.id_int,
-        'name': parsed.name,
-        'value': parsed.value_str,
-        'unit': parsed.unit_str
-    } for parsed in regs]
+    regs = [registers.RegisterOutput.from_register_data(reg) for reg in resp.registers.values()]
+    OUT[now] = [
+        {
+            'rid': parsed.id_int,
+            'name': parsed.name,
+            'value': parsed.value_str,
+            'unit': parsed.unit_str
+        } for parsed in regs]
+
 with open(FILE_NAME + '.new', 'w') as f:
     json.dump(OUT, f, indent=2)
 os.rename(FILE_NAME + '.new', FILE_NAME)
