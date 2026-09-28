@@ -40,9 +40,16 @@ comm = client.PySerialClientCommunicator(
     serial_device=sys.argv[1]
 )
 
-resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in [1001]]))
+resp = send_and_recv(comm, messages.GetRegisterRequest(registers=[messages.RegisterID(rid) for rid in [1001, 586, 279]]))
 sn = registers.RegisterOutput.from_register_data(extract_reg_by_id(resp.registers, 1001)).value_str
-logger.info(f'Meter S/N {sn}')
+try:
+    vendor_prefix = registers.RegisterOutput.from_register_data(extract_reg_by_id(resp.registers, 586)).value_str
+except Exception:
+    din_id = registers.RegisterOutput.from_register_data(extract_reg_by_id(resp.registers, 279)).value_str
+    vendor_prefix = din_id[1:4]
+    if din_id[6:] != sn:
+        raise RuntimeError(f'Cannot determin meter vendor: {din_id=} mismatch with {sn=}')
+logger.info(f'Meter S/N {vendor_prefix}{sn}')
 if not sn.isdigit():
     logger.error('Malformed meter SN: not all digits: %s', sn)
     sys.exit(1)
